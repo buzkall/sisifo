@@ -84,15 +84,18 @@ return [
     | Notifications
     |--------------------------------------------------------------------------
     |
-    | `notifiable` is a closure returning the recipient model for database
-    | notifications. `channels` is the list of NotificationChannel classes
-    | that get instantiated when a task fires.
+    | The database channel recipient. Leave `notifiable` null (cache-safe) to
+    | resolve the user from `notify_user_id` against `notifiable_model` — or the
+    | app's auth user model when that is null. A closure or notifiable instance
+    | is also accepted, but breaks `php artisan config:cache`, so avoid it.
+    | `channels` is the list of NotificationChannel classes fired by a task.
     |
     */
 
     'notifications' => [
-        'notifiable' => null,
-        'channels'   => [
+        'notifiable'       => null,
+        'notifiable_model' => null,
+        'channels'         => [
             DatabaseNotificationChannel::class,
             PushoverChannel::class,
         ],

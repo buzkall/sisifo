@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-06-27
+
+### Fixed
+
+- Resolve the database-notification recipient in a cache-safe way: leave `sisifo.notifications.notifiable` null and resolve the user from `notify_user_id` against `notifiable_model` (or the app's auth user model). Avoids the non-serializable closure that broke `php artisan config:cache`. Closures/instances are still accepted for backward compatibility.
+
+### Added
+
+- `sisifo.notifications.notifiable_model` config option to select the model used to resolve `notify_user_id`.
+
 ## [0.1.2] - 2026-06-27
 
 ### Added
@@ -35,7 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - English and Spanish translations.
 - `EmbeddingStore` scaffolding (pgvector / MariaDB / MySQL brute-force) for a future memory feature — not yet wired into tasks.
 
-[Unreleased]: https://github.com/buzkall/sisifo/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/buzkall/sisifo/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/buzkall/sisifo/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/buzkall/sisifo/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/buzkall/sisifo/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/buzkall/sisifo/releases/tag/v0.1.0

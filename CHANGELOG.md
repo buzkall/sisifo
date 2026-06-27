@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-06-27
+
+### Fixed
+
+- Escape the `last_result` value on the Mailbox Task edit page to prevent stored XSS from AI/email-derived content (`nl2br(e(...))` instead of raw HTML).
+
 ## [0.1.0] - 2026-06-27
 
 ### Added
@@ -23,5 +29,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - English and Spanish translations.
 - `EmbeddingStore` scaffolding (pgvector / MariaDB / MySQL brute-force) for a future memory feature — not yet wired into tasks.
 
-[Unreleased]: https://github.com/buzkall/sisifo/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/buzkall/sisifo/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/buzkall/sisifo/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/buzkall/sisifo/releases/tag/v0.1.0

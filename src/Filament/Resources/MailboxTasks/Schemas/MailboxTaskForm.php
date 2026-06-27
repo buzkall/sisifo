@@ -134,7 +134,9 @@ class MailboxTaskForm
                             ->hiddenOn('create'),
 
                         Callout::make(__('sisifo::sisifo.last_result'))
-                            ->description(fn($record) => new HtmlString($record->last_result ?? '-'))
+                            ->description(fn($record) => $record->last_result
+                                ? new HtmlString(nl2br(e($record->last_result)))
+                                : '-')
                             ->info()
                             ->hiddenOn('create'),
                     ]),

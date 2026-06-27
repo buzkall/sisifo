@@ -51,6 +51,16 @@ test('ReplicateAction clones the task with copy suffix, inactive, and reset hist
         ->and($replica->last_result)->toBeNull();
 });
 
+test('EditMailboxTask page escapes the last_result callout', function() {
+    $task = MailboxTask::factory()->create([
+        'last_result' => '<script>alert(1)</script>',
+    ]);
+
+    Livewire::test(EditMailboxTask::class, ['record' => $task->id])
+        ->assertSuccessful()
+        ->assertDontSee('<script>alert(1)</script>', escape: false);
+});
+
 test('forceFetch header action is visible only on watch tasks', function() {
     $watch = MailboxTask::factory()->watch()->create();
     $summary = MailboxTask::factory()->create();

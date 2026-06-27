@@ -46,7 +46,12 @@ class SisifoServiceProvider extends ServiceProvider
     {
         $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
         $this->loadTranslationsFrom(__DIR__ . '/../lang', 'sisifo');
-        $this->loadViewsFrom(__DIR__ . '/../resources/views', 'sisifo');
+
+        $viewsPath = __DIR__ . '/../resources/views';
+
+        if (is_dir($viewsPath)) {
+            $this->loadViewsFrom($viewsPath, 'sisifo');
+        }
 
         $this->commands([ProcessMailbox::class]);
 
@@ -67,9 +72,11 @@ class SisifoServiceProvider extends ServiceProvider
                 __DIR__ . '/../lang' => $this->app->langPath('vendor/sisifo'),
             ], 'sisifo-lang');
 
-            $this->publishes([
-                __DIR__ . '/../resources/views' => resource_path('views/vendor/sisifo'),
-            ], 'sisifo-views');
+            if (is_dir($viewsPath)) {
+                $this->publishes([
+                    $viewsPath => resource_path('views/vendor/sisifo'),
+                ], 'sisifo-views');
+            }
         }
 
         $this->app->afterResolving(Schedule::class, function(Schedule $schedule) {

@@ -19,6 +19,7 @@ use Filament\Support\SupportServiceProvider;
 use Filament\Tables\TablesServiceProvider;
 use Filament\Widgets\WidgetsServiceProvider;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;
 use Livewire\LivewireServiceProvider;
 use Orchestra\Testbench\TestCase as BaseTestCase;
@@ -29,6 +30,10 @@ abstract class TestCase extends BaseTestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        // Freeze time to a known weekday so schedule-aware tasks behave
+        // deterministically regardless of the day the suite is run.
+        Carbon::setTestNow('2026-06-29 12:00:00'); // Monday
 
         Schema::create('users', function(Blueprint $table) {
             $table->id();
@@ -60,6 +65,13 @@ abstract class TestCase extends BaseTestCase
 
         $this->createBeyondCodeInboundEmailsTable();
         $this->artisan('migrate', ['--database' => 'testing'])->run();
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+
+        parent::tearDown();
     }
 
     protected function getPackageProviders($app): array

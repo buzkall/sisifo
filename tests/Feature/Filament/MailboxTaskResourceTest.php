@@ -1,5 +1,6 @@
 <?php
 
+use Arzcode\Sisifo\Filament\Resources\MailboxTasks\MailboxTaskResource;
 use Arzcode\Sisifo\Filament\Resources\MailboxTasks\Pages\EditMailboxTask;
 use Arzcode\Sisifo\Filament\Resources\MailboxTasks\Pages\ListMailboxTasks;
 use Arzcode\Sisifo\Models\MailboxTask;
@@ -21,6 +22,16 @@ beforeEach(function() {
 
 test('ListMailboxTasks page renders', function() {
     Livewire::test(ListMailboxTasks::class)->assertSuccessful();
+});
+
+test('navigation group defaults to Logistics and follows the config', function() {
+    expect(MailboxTaskResource::getNavigationGroup())->toBe(__('Logistics'));
+
+    config()->set('sisifo.navigation_group', 'Operations');
+    expect(MailboxTaskResource::getNavigationGroup())->toBe('Operations');
+
+    config()->set('sisifo.navigation_group', null);
+    expect(MailboxTaskResource::getNavigationGroup())->toBeNull();
 });
 
 test('editCommonPrompt header action persists the new value in settings', function() {

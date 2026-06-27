@@ -13,6 +13,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use UnitEnum;
 
 class MailboxTaskResource extends Resource
 {
@@ -29,6 +30,13 @@ class MailboxTaskResource extends Resource
     public static function getPluralLabel(): string
     {
         return __('sisifo::sisifo.mailbox_tasks');
+    }
+
+    public static function getNavigationGroup(): string|UnitEnum|null
+    {
+        $group = config('sisifo.navigation_group');
+
+        return is_string($group) ? __($group) : $group;
     }
 
     public static function getActiveNavigationIcon(): string|Heroicon|null

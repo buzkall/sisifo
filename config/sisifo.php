@@ -7,6 +7,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Filament
+    |--------------------------------------------------------------------------
+    |
+    | The navigation group the Mailbox Task resource is placed under in the
+    | Filament panel. A string is passed through the translator at runtime, so
+    | a translation key works here. Set to null to leave the resource ungrouped.
+    |
+    */
+
+    'navigation_group' => 'Logistics',
+
+    /*
+    |--------------------------------------------------------------------------
     | Schedule
     |--------------------------------------------------------------------------
     |

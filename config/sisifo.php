@@ -1,0 +1,96 @@
+<?php
+
+use Arzcode\Sisifo\Notifications\Channels\DatabaseNotificationChannel;
+use Arzcode\Sisifo\Notifications\Channels\PushoverChannel;
+
+return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Schedule
+    |--------------------------------------------------------------------------
+    |
+    | How often to poll the IMAP mailbox for new messages.
+    |
+    */
+
+    'schedule' => [
+        'check_every_minutes' => env('SISIFO_CHECK_EVERY_MINUTES', env('MAILBOX_CHECK_EVERY_MINUTES', 15)),
+        'environments'        => ['production'],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | IMAP Connection
+    |--------------------------------------------------------------------------
+    */
+
+    'imap' => [
+        'host'          => env('SISIFO_IMAP_HOST', env('MAILBOX_HOST')),
+        'port'          => env('SISIFO_IMAP_PORT', env('MAILBOX_PORT', 993)),
+        'encryption'    => env('SISIFO_IMAP_ENCRYPTION', env('MAILBOX_ENCRYPTION', 'ssl')),
+        'validate_cert' => env('SISIFO_IMAP_VALIDATE_CERT', env('MAILBOX_VALIDATE_CERT', true)),
+        'username'      => env('SISIFO_IMAP_USERNAME', env('MAILBOX_USERNAME')),
+        'password'      => env('SISIFO_IMAP_PASSWORD', env('MAILBOX_PASSWORD')),
+        'protocol'      => env('SISIFO_IMAP_PROTOCOL', 'imap'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | LLM Provider
+    |--------------------------------------------------------------------------
+    |
+    | Selects which LlmProvider implementation gets bound in the container.
+    | Supported drivers: 'prism' (Prism PHP), 'laravel-ai' (stub — not wired).
+    |
+    */
+
+    'llm' => [
+        'driver'     => env('SISIFO_LLM_DRIVER', 'prism'),
+        'provider'   => env('SISIFO_LLM_PROVIDER', 'anthropic'),
+        'model'      => env('SISIFO_LLM_MODEL', 'claude-haiku-4-5'),
+        'max_tokens' => (int)env('SISIFO_LLM_MAX_TOKENS', 2048),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Embeddings
+    |--------------------------------------------------------------------------
+    |
+    | Configures the EmbeddingStore. The driver is selected automatically
+    | from the default DB connection (pgsql, mariadb, mysql).
+    |
+    */
+
+    'embeddings' => [
+        'dimensions' => (int)env('SISIFO_EMBEDDING_DIMENSIONS', 1536),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Notifications
+    |--------------------------------------------------------------------------
+    |
+    | `notifiable` is a closure returning the recipient model for database
+    | notifications. `channels` is the list of NotificationChannel classes
+    | that get instantiated when a task fires.
+    |
+    */
+
+    'notifications' => [
+        'notifiable' => null,
+        'channels'   => [
+            DatabaseNotificationChannel::class,
+            PushoverChannel::class,
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Recipient
+    |--------------------------------------------------------------------------
+    */
+
+    'notify_user_id' => env('SISIFO_NOTIFY_USER_ID', env('MAILBOX_NOTIFY_USER_ID')),
+
+];

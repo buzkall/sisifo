@@ -39,7 +39,7 @@ return [
     */
 
     'imap' => [
-        'host'          => env('SISIFO_IMAP_HOST', env('MAILBOX_HOST')),
+        'host'          => env('SISIFO_IMAP_HOST', env('MAILBOX_IMAP_HOST', env('MAILBOX_HOST'))),
         'port'          => env('SISIFO_IMAP_PORT', env('MAILBOX_PORT', 993)),
         'encryption'    => env('SISIFO_IMAP_ENCRYPTION', env('MAILBOX_ENCRYPTION', 'ssl')),
         'validate_cert' => env('SISIFO_IMAP_VALIDATE_CERT', env('MAILBOX_VALIDATE_CERT', true)),

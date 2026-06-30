@@ -72,6 +72,17 @@ test('EditMailboxTask page escapes the last_result callout', function() {
         ->assertDontSee('<script>alert(1)</script>', escape: false);
 });
 
+test('EditMailboxTask page renders allowed formatting tags in the last_result callout', function() {
+    $task = MailboxTask::factory()->create([
+        'last_result' => '<b>DICTAPP</b><br><i>nota</i>',
+    ]);
+
+    Livewire::test(EditMailboxTask::class, ['record' => $task->id])
+        ->assertSuccessful()
+        ->assertSee('<b>DICTAPP</b>', escape: false)
+        ->assertSee('<i>nota</i>', escape: false);
+});
+
 test('forceFetch header action is visible only on watch tasks', function() {
     $watch = MailboxTask::factory()->watch()->create();
     $summary = MailboxTask::factory()->create();

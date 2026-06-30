@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Render the `last_result` preview on the Mailbox Task edit page with the Pushover-compatible formatting tags (`<b>`, `<i>`, `<u>`, `<br>`, `<hr>`, `<a href="http...">`) instead of showing raw escaped markup. A new `PushoverHtml::sanitize()` helper escapes everything first and re-allows only that bare tag subset (anchors restricted to `http(s)` hrefs), so stored XSS from AI/email-derived content stays blocked.
+
 ## [0.1.4] - 2026-06-27
 
 ### Fixed

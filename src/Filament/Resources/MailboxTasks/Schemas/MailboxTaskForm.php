@@ -5,6 +5,7 @@ namespace Arzcode\Sisifo\Filament\Resources\MailboxTasks\Schemas;
 use Arzcode\Sisifo\Enums\MailboxTaskNotificationEnum;
 use Arzcode\Sisifo\Enums\MailboxTaskTypeEnum;
 use Arzcode\Sisifo\Settings\MailboxSettings;
+use Arzcode\Sisifo\Support\PushoverHtml;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
@@ -135,7 +136,7 @@ class MailboxTaskForm
 
                         Callout::make(__('sisifo::sisifo.last_result'))
                             ->description(fn($record) => $record->last_result
-                                ? new HtmlString(nl2br(e($record->last_result)))
+                                ? new HtmlString(PushoverHtml::sanitize($record->last_result))
                                 : '-')
                             ->info()
                             ->hiddenOn('create'),

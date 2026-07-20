@@ -63,6 +63,10 @@ return [
         'provider'   => env('SISIFO_LLM_PROVIDER', 'anthropic'),
         'model'      => env('SISIFO_LLM_MODEL', 'claude-haiku-4-5'),
         'max_tokens' => (int)env('SISIFO_LLM_MAX_TOKENS', 2048),
+
+        // Per-item body truncation (characters) applied when rendering items
+        // into the LLM input. Defaults to 500 to preserve historical behaviour.
+        'item_body_budget' => (int)env('SISIFO_LLM_ITEM_BODY_BUDGET', 500),
     ],
 
     /*

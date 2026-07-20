@@ -2,6 +2,7 @@
 
 namespace Arzcode\Sisifo\Models;
 
+use Arzcode\Sisifo\Contracts\SummarizableItem;
 use Arzcode\Sisifo\Database\Factories\MailboxTaskFactory;
 use Arzcode\Sisifo\Enums\MailboxTaskNotificationEnum;
 use Arzcode\Sisifo\Enums\MailboxTaskTypeEnum;
@@ -12,11 +13,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Collection;
+use InvalidArgumentException;
 
 /**
  * @property int $id
  * @property string $name
  * @property MailboxTaskTypeEnum $type
+ * @property string $source
  * @property string $prompt
  * @property bool $is_active
  * @property bool $one_shot
@@ -36,10 +39,16 @@ class MailboxTask extends Model
 {
     use HasFactory;
 
+    /**
+     * Draws items from Sisifo's inbound-email store (the default source).
+     */
+    public const SOURCE_INBOUND_EMAIL = 'inbound_email';
+
     protected $table = 'mailbox_tasks';
     protected $fillable = [
         'name',
         'type',
+        'source',
         'prompt',
         'is_active',
         'one_shot',
@@ -94,7 +103,33 @@ class MailboxTask extends Model
         return $query->where('type', MailboxTaskTypeEnum::Watch);
     }
 
-    public function getUnprocessedEmails(): Collection
+    /**
+     * The unprocessed items this task should summarize, drawn from its source.
+     *
+     * @return Collection<int, SummarizableItem>
+     */
+    public function getUnprocessedItems(): Collection
+    {
+        $items = match ($this->source) {
+            self::SOURCE_INBOUND_EMAIL => $this->getUnprocessedInboundEmails(),
+            default                    => throw new InvalidArgumentException("Unknown task source [{$this->source}]."),
+        };
+
+        // Normalize the source-specific collection to the contract type.
+        // Support\Collection is invariant, so an InboundEmail collection is not
+        // itself a SummarizableItem collection to static analysis.
+        return $items->map($this->asSummarizableItem(...));
+    }
+
+    private function asSummarizableItem(SummarizableItem $item): SummarizableItem
+    {
+        return $item;
+    }
+
+    /**
+     * @return Collection<int, InboundEmail>
+     */
+    private function getUnprocessedInboundEmails(): Collection
     {
         $query = InboundEmail::whereDoesntHave(
             'mailboxTasks',
@@ -155,15 +190,35 @@ class MailboxTask extends Model
         $this->update(['last_run_at' => now()]);
     }
 
-    public function markEmailsAsProcessed(Collection $emails): void
+    /**
+     * Record the given items as processed by this task, via its source's pivot.
+     *
+     * @param  Collection<int, SummarizableItem>  $items
+     */
+    public function markItemsAsProcessed(Collection $items): void
     {
-        $pivotData = $emails->mapWithKeys(fn(InboundEmail $email) => [
-            $email->id => ['processed_at' => now()],
+        match ($this->source) {
+            self::SOURCE_INBOUND_EMAIL => $this->markInboundEmailsAsProcessed($items),
+            default                    => throw new InvalidArgumentException("Unknown task source [{$this->source}]."),
+        };
+
+        $this->update(['last_run_at' => now()]);
+    }
+
+    /**
+     * @param  Collection<int, SummarizableItem>  $items
+     *
+     * NOTE: each source keeps its own pivot for now (`mailbox_task_inbound_email`
+     * here). Unifying the pivots into a single polymorphic table is deferred
+     * future work; the seam intentionally stops short of that.
+     */
+    private function markInboundEmailsAsProcessed(Collection $items): void
+    {
+        $pivotData = $items->mapWithKeys(fn(SummarizableItem $item) => [
+            $item->sisifoKey() => ['processed_at' => now()],
         ]);
 
         $this->processedEmails()->attach($pivotData);
-
-        $this->update(['last_run_at' => now()]);
     }
 
     private function applyFilters(Builder $query): void

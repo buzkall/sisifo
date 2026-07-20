@@ -7,7 +7,20 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property string $message_id
+ * @property string $subject
+ * @property string $from_address
+ * @property string $from_name
+ * @property string $message
+ * @property string $text_body
+ * @property Carbon|null $received_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ */
 class InboundEmail extends Model
 {
     use HasFactory;

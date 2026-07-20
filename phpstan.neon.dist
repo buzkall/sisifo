@@ -5,8 +5,15 @@ parameters:
     paths:
         - src
     level: 5
+    reportUnmatchedIgnoredErrors: false
     ignoreErrors:
         - '#Unsafe usage of new static#'
+        -
+            identifier: missingType.iterableValue
+        # Larastan infers Model::latest()->first() as non-nullable, but it
+        # returns null on an empty table, so the nullsafe operator is required.
+        -
+            identifier: nullsafe.neverNull
+            path: src/Console/Commands/ProcessMailbox.php
     excludePaths:
         - ./*/*/FileToBeExcluded.php
-    checkMissingIterableValueType: false

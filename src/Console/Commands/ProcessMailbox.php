@@ -97,7 +97,7 @@ class ProcessMailbox extends Command
                 InboundEmail::firstOrCreate(
                     ['message_id' => $message->getMessageId()],
                     [
-                        'subject'      => Str::limit((string) $message->getSubject(), 252),
+                        'subject'      => Str::limit((string)$message->getSubject(), 252),
                         'from_address' => $message->getFrom()[0]->mail,
                         'from_name'    => $message->getFrom()[0]->personal ?? '',
                         'message'      => $message->getRawBody(),

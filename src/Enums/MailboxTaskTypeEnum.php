@@ -12,7 +12,7 @@ enum MailboxTaskTypeEnum: string implements HasLabel
     case Summary = 'summary';
     case Watch = 'watch';
 
-    public function getLabel(): ?string
+    public function getLabel(): string
     {
         return match ($this) {
             self::Summary => __('sisifo::sisifo.type_summary'),

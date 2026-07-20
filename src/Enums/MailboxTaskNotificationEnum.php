@@ -14,7 +14,7 @@ enum MailboxTaskNotificationEnum: string implements HasLabel
     case Pushover = 'pushover';
     case Database = 'database';
 
-    public function getLabel(): ?string
+    public function getLabel(): string
     {
         return match ($this) {
             self::Pushover => __('sisifo::sisifo.notification_pushover'),

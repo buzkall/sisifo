@@ -4,6 +4,7 @@ namespace Arzcode\Sisifo\Console\Commands;
 
 use Arzcode\Sisifo\Contracts\LlmProvider;
 use Arzcode\Sisifo\Contracts\NotificationChannel;
+use Arzcode\Sisifo\Contracts\SummarizableItem;
 use Arzcode\Sisifo\Enums\MailboxTaskNotificationEnum;
 use Arzcode\Sisifo\Models\InboundEmail;
 use Arzcode\Sisifo\Models\MailboxTask;
@@ -156,21 +157,23 @@ class ProcessMailbox extends Command
 
     private function executeTask(MailboxTask $task, LlmProvider $llm): bool
     {
-        $emails = $task->getUnprocessedEmails();
+        $items = $task->getUnprocessedItems();
 
-        if ($emails->isEmpty()) {
+        if ($items->isEmpty()) {
             return true;
         }
 
         $task->markAttempted();
 
         try {
-            $emailsText = $emails->map(function(InboundEmail $email) {
-                $body = Str::limit($email->text_body, 500);
+            $bodyBudget = (int)config('sisifo.llm.item_body_budget', 500);
 
-                return "De: {$email->from_name} <{$email->from_address}>\n"
-                    . "Asunto: {$email->subject}\n"
-                    . "Fecha: {$email->received_at->format('d/m/Y H:i')}\n"
+            $itemsText = $items->map(function(SummarizableItem $item) use ($bodyBudget) {
+                $body = Str::limit($item->sisifoBody(), $bodyBudget);
+
+                return "De: {$item->sisifoOrigin()}\n"
+                    . "Asunto: {$item->sisifoTitle()}\n"
+                    . "Fecha: {$item->sisifoOccurredAt()->format('d/m/Y H:i')}\n"
                     . "Contenido: {$body}\n";
             })->implode("\n---\n");
 
@@ -185,7 +188,9 @@ class ProcessMailbox extends Command
                 ? "\n\n---\nResultado del último envío (para comparar y destacar solo lo nuevo):\n" . Str::limit($task->last_result, 1024)
                 : '';
 
-            $responseText = $llm->text($fullPrompt, $emailsText . $previousResult, 2048);
+            $maxTokens = (int)config('sisifo.llm.max_tokens', 2048);
+
+            $responseText = $llm->text($fullPrompt, $itemsText . $previousResult, $maxTokens);
 
             if (trim($responseText) === self::SKIP_SENTINEL) {
                 $this->info("Task \"{$task->name}\" returned no notification.");
@@ -197,7 +202,7 @@ class ProcessMailbox extends Command
 
             $this->sendNotification($task, $summary);
 
-            $task->markEmailsAsProcessed($emails);
+            $task->markItemsAsProcessed($items);
             $task->update(['last_result' => $summary]);
 
             if ($task->one_shot) {

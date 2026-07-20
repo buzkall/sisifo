@@ -1,0 +1,25 @@
+<?php
+
+use Arzcode\Sisifo\Models\MailboxTask;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('mailbox_tasks', function(Blueprint $table) {
+            $table->string('source')
+                ->default(MailboxTask::SOURCE_INBOUND_EMAIL)
+                ->after('type');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('mailbox_tasks', function(Blueprint $table) {
+            $table->dropColumn('source');
+        });
+    }
+};

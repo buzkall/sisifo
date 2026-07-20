@@ -19,6 +19,7 @@ class MailboxTaskFactory extends Factory
         return [
             'name'                 => $this->faker->sentence(3),
             'type'                 => MailboxTaskTypeEnum::Summary,
+            'source'               => MailboxTask::SOURCE_INBOUND_EMAIL,
             'prompt'               => $this->faker->paragraph(),
             'is_active'            => true,
             'one_shot'             => false,

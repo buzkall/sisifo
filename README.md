@@ -11,6 +11,7 @@ Like its namesake Sisyphus, it keeps rolling through the inbox so you don't have
 
 ## Features
 
+- **Multiple sources** — summarize an IMAP mailbox (`inbound_email`) or a public repo's GitHub releases (`github_releases`); both flow through one `SummarizableItem` engine.
 - **IMAP polling** — fetches unseen messages on a schedule and stores them as `InboundEmail` records.
 - **Two task types**
   - **Summary** — runs on a daily/hourly schedule and digests everything new since it last ran.
@@ -136,6 +137,43 @@ If, after analyzing the emails, the LLM decides there is nothing relevant to rep
 ```bash
 php artisan mailbox:process              # fetch + run all due tasks
 php artisan mailbox:process --task=5     # run a single task by ID, ignoring its schedule
+```
+
+### Sources
+
+Every task declares a **source** — where it draws items from. Both sources feed
+the same summarization engine through the `SummarizableItem` contract, so
+prompts, scheduling, and notifications work identically.
+
+- `inbound_email` *(default)* — the IMAP mailbox. Uses the `Filters` above.
+- `github_releases` — a public repository's releases feed
+  (`https://github.com/{owner}/{repo}/releases.atom`, no token, no API).
+
+To point a task at a repository, set its `source` to `github_releases` and put
+`owner/repo` in `source_ref`:
+
+```php
+use Arzcode\Sisifo\Models\MailboxTask;
+
+MailboxTask::create([
+    'name'             => 'Filament releases',
+    'type'             => 'summary',
+    'source'           => MailboxTask::SOURCE_GITHUB_RELEASES,
+    'source_ref'       => 'filamentphp/filament',
+    'prompt'           => 'Summarize what changed in these releases for a Laravel team.',
+    'schedule_frequency' => 'daily',
+    'schedule_time'    => '09:00',
+]);
+```
+
+Each run fetches the feed, ingests new entries into `sisifo_feed_items` (deduped
+by entry id), and skips near-empty changelogs (betas that render as
+"No content."). Stable release notes are large, so raise the per-item body
+budget well above the 500-char email default:
+
+```php
+// config/sisifo.php → llm.item_body_budget, or:
+SISIFO_LLM_ITEM_BODY_BUDGET=40000
 ```
 
 ## Extending

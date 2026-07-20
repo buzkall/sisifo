@@ -8,6 +8,7 @@ use Arzcode\Sisifo\Contracts\SummarizableItem;
 use Arzcode\Sisifo\Enums\MailboxTaskNotificationEnum;
 use Arzcode\Sisifo\Models\InboundEmail;
 use Arzcode\Sisifo\Models\MailboxTask;
+use Arzcode\Sisifo\Services\GithubReleases\GithubReleasesIngestor;
 use Arzcode\Sisifo\Settings\MailboxSettings;
 use Exception;
 use Illuminate\Console\Command;
@@ -155,8 +156,28 @@ class ProcessMailbox extends Command
         });
     }
 
+    /**
+     * Refresh a task's non-email source into its Sisifo-owned table before it
+     * selects unprocessed items. The email source is fetched globally elsewhere.
+     */
+    private function ingestExternalItems(MailboxTask $task): void
+    {
+        if ($task->source !== MailboxTask::SOURCE_GITHUB_RELEASES || $task->source_ref === null) {
+            return;
+        }
+
+        try {
+            app(GithubReleasesIngestor::class)->ingest($task->source_ref);
+        } catch (Exception $e) {
+            $this->error("Feed fetch error for [{$task->source_ref}]: {$e->getMessage()}");
+            Log::error("Mailbox task [{$task->name}] feed fetch error: " . $e->getMessage());
+        }
+    }
+
     private function executeTask(MailboxTask $task, LlmProvider $llm): bool
     {
+        $this->ingestExternalItems($task);
+
         $items = $task->getUnprocessedItems();
 
         if ($items->isEmpty()) {

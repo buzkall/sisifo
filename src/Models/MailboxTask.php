@@ -25,7 +25,7 @@ use Illuminate\Support\Collection;
  * @property string|null $schedule_time
  * @property string|null $schedule_timezone
  * @property array<string, mixed>|null $filters
- * @property Collection<int, MailboxTaskNotificationEnum> $notification_methods
+ * @property Collection<int, MailboxTaskNotificationEnum>|null $notification_methods
  * @property bool $is_urgent
  * @property \Illuminate\Support\Carbon|null $last_run_at
  * @property string|null $last_result

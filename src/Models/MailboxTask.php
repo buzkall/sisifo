@@ -13,6 +13,25 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Collection;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property MailboxTaskTypeEnum $type
+ * @property string $prompt
+ * @property bool $is_active
+ * @property bool $one_shot
+ * @property string|null $schedule_frequency
+ * @property array<int, int>|null $schedule_days
+ * @property string|null $schedule_time
+ * @property string|null $schedule_timezone
+ * @property array<string, mixed>|null $filters
+ * @property Collection<int, MailboxTaskNotificationEnum> $notification_methods
+ * @property bool $is_urgent
+ * @property \Illuminate\Support\Carbon|null $last_run_at
+ * @property string|null $last_result
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ */
 class MailboxTask extends Model
 {
     use HasFactory;
@@ -161,14 +180,16 @@ class MailboxTask extends Model
             ->when(
                 $filters->get('from_domains'),
                 fn(Builder $q, Collection $domains) => $q
-                    ->where(fn(Builder $q) => $domains
-                        ->each(fn(string $domain) => $q->orWhereLike('from_address', "%@$domain")))
+                    ->where(function(Builder $q) use ($domains) {
+                        $domains->each(fn(string $domain) => $q->orWhereLike('from_address', "%@$domain"));
+                    })
             )
             ->when(
                 $filters->get('subject_keywords'),
                 fn(Builder $q, Collection $keywords) => $q
-                    ->where(fn(Builder $q) => $keywords
-                        ->each(fn(string $keyword) => $q->orWhereLike('subject', "%$keyword%")))
+                    ->where(function(Builder $q) use ($keywords) {
+                        $keywords->each(fn(string $keyword) => $q->orWhereLike('subject', "%$keyword%"));
+                    })
             );
     }
 

@@ -32,6 +32,14 @@ class MailboxTaskFactory extends Factory
         ];
     }
 
+    public function githubReleases(string $repo = 'filamentphp/filament'): static
+    {
+        return $this->state([
+            'source'     => MailboxTask::SOURCE_GITHUB_RELEASES,
+            'source_ref' => $repo,
+        ]);
+    }
+
     public function watch(): static
     {
         return $this->state([

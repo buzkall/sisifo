@@ -21,6 +21,7 @@ use InvalidArgumentException;
  * @property string $name
  * @property MailboxTaskTypeEnum $type
  * @property string $source
+ * @property string|null $source_ref
  * @property string $prompt
  * @property bool $is_active
  * @property bool $one_shot
@@ -46,11 +47,18 @@ class MailboxTask extends Model
      */
     public const SOURCE_INBOUND_EMAIL = 'inbound_email';
 
+    /**
+     * Draws items from a public GitHub repository's releases feed; the repo is
+     * stored in `source_ref` as `owner/repo`.
+     */
+    public const SOURCE_GITHUB_RELEASES = 'github_releases';
+
     protected $table = 'mailbox_tasks';
     protected $fillable = [
         'name',
         'type',
         'source',
+        'source_ref',
         'prompt',
         'is_active',
         'one_shot',
@@ -94,6 +102,15 @@ class MailboxTask extends Model
     }
 
     /**
+     * @return BelongsToMany<FeedItem, $this>
+     */
+    public function processedFeedItems(): BelongsToMany
+    {
+        return $this->belongsToMany(FeedItem::class, 'mailbox_task_feed_item')
+            ->withPivot('processed_at');
+    }
+
+    /**
      * @param  Builder<self>  $query
      * @return Builder<self>
      */
@@ -128,8 +145,9 @@ class MailboxTask extends Model
     public function getUnprocessedItems(): Collection
     {
         $items = match ($this->source) {
-            self::SOURCE_INBOUND_EMAIL => $this->getUnprocessedInboundEmails(),
-            default                    => throw new InvalidArgumentException("Unknown task source [{$this->source}]."),
+            self::SOURCE_INBOUND_EMAIL   => $this->getUnprocessedInboundEmails(),
+            self::SOURCE_GITHUB_RELEASES => $this->getUnprocessedFeedItems(),
+            default                      => throw new InvalidArgumentException("Unknown task source [{$this->source}]."),
         };
 
         // Normalize the source-specific collection to the contract type.
@@ -160,6 +178,23 @@ class MailboxTask extends Model
         $query->receivedAfter(now()->subDays($this->lookBackDays()));
 
         return $query->orderBy('received_at')->get();
+    }
+
+    /**
+     * Releases for this task's repo (`source_ref`) not yet processed by it.
+     *
+     * @return Collection<int, FeedItem>
+     */
+    private function getUnprocessedFeedItems(): Collection
+    {
+        return FeedItem::query()
+            ->where('source_ref', $this->source_ref)
+            ->whereDoesntHave(
+                'mailboxTasks',
+                fn(Builder $q) => $q->where('mailbox_task_id', $this->id)
+            )
+            ->orderBy('published_at')
+            ->get();
     }
 
     public function lookBackDays(): int
@@ -229,8 +264,9 @@ class MailboxTask extends Model
     public function markItemsAsProcessed(Collection $items): void
     {
         match ($this->source) {
-            self::SOURCE_INBOUND_EMAIL => $this->markInboundEmailsAsProcessed($items),
-            default                    => throw new InvalidArgumentException("Unknown task source [{$this->source}]."),
+            self::SOURCE_INBOUND_EMAIL   => $this->markInboundEmailsAsProcessed($items),
+            self::SOURCE_GITHUB_RELEASES => $this->markFeedItemsAsProcessed($items),
+            default                      => throw new InvalidArgumentException("Unknown task source [{$this->source}]."),
         };
 
         $this->update(['last_run_at' => now()]);
@@ -250,6 +286,18 @@ class MailboxTask extends Model
         ]);
 
         $this->processedEmails()->attach($pivotData);
+    }
+
+    /**
+     * @param  Collection<int, SummarizableItem>  $items
+     */
+    private function markFeedItemsAsProcessed(Collection $items): void
+    {
+        $pivotData = $items->mapWithKeys(fn(SummarizableItem $item) => [
+            $item->sisifoKey() => ['processed_at' => now()],
+        ]);
+
+        $this->processedFeedItems()->attach($pivotData);
     }
 
     /**

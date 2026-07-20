@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/" xml:lang="en-US">
+  <id>tag:github.com,2008:https://github.com/filamentphp/filament/releases</id>
+  <link type="text/html" rel="alternate" href="https://github.com/filamentphp/filament/releases"/>
+  <link type="application/atom+xml" rel="self" href="https://github.com/filamentphp/filament/releases.atom"/>
+  <title>Release notes from filament</title>
+  <updated>2026-07-15T12:00:00Z</updated>
+  <entry>
+    <id>tag:github.com,2008:Repository/128923097/v5.7.0-beta4</id>
+    <updated>2026-07-15T12:00:00Z</updated>
+    <link rel="alternate" type="text/html" href="https://github.com/filamentphp/filament/releases/tag/v5.7.0-beta4"/>
+    <title>v5.7.0-beta4</title>
+    <content type="html">No content.</content>
+    <author>
+      <name>danharrin</name>
+    </author>
+    <media:thumbnail height="30" width="30" url="https://avatars.githubusercontent.com/u/41889?s=60&amp;v=4"/>
+  </entry>
+  <entry>
+    <id>tag:github.com,2008:Repository/128923097/v5.6.8</id>
+    <updated>2026-07-10T09:30:00Z</updated>
+    <link rel="alternate" type="text/html" href="https://github.com/filamentphp/filament/releases/tag/v5.6.8"/>
+    <title>v5.6.8</title>
+    <content type="html">&lt;h2&gt;What's Changed&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;Fix table column alignment on nested layouts by @contributor01 in #10001&lt;/li&gt;
+&lt;li&gt;Fix repeater reordering losing focus by @contributor02 in #10002&lt;/li&gt;
+&lt;li&gt;Fix select search debounce on multiple mode by @contributor03 in #10003&lt;/li&gt;
+&lt;li&gt;Fix notification body overflow on small screens by @contributor04 in #10004&lt;/li&gt;
+&lt;li&gt;Fix wizard step validation skipping hidden fields by @contributor05 in #10005&lt;/li&gt;
+&lt;li&gt;Fix infolist entry alignment in split layout by @contributor06 in #10006&lt;/li&gt;
+&lt;li&gt;Fix action modal not closing after redirect by @contributor07 in #10007&lt;/li&gt;
+&lt;li&gt;Fix global search keyboard navigation wrap by @contributor08 in #10008&lt;/li&gt;
+&lt;li&gt;Fix file upload preview memory leak by @contributor09 in #10009&lt;/li&gt;
+&lt;li&gt;Fix table bulk action deselect after refresh by @contributor10 in #10010&lt;/li&gt;
+&lt;li&gt;Fix relation manager pagination reset by @contributor11 in #10011&lt;/li&gt;
+&lt;li&gt;Fix dark mode contrast on disabled buttons by @contributor12 in #10012&lt;/li&gt;
+&lt;li&gt;Fix date picker timezone drift by @contributor13 in #10013&lt;/li&gt;
+&lt;li&gt;Fix chart widget resize flicker by @contributor14 in #10014&lt;/li&gt;
+&lt;li&gt;Fix tenant switch losing query string by @contributor15 in #10015&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Full Changelog&lt;/strong&gt;: https://github.com/filamentphp/filament/compare/v5.6.7...v5.6.8&lt;/p&gt;
+&lt;p&gt;ENDOFCHANGELOG568&lt;/p&gt;</content>
+    <author>
+      <name>danharrin</name>
+    </author>
+    <media:thumbnail height="30" width="30" url="https://avatars.githubusercontent.com/u/41889?s=60&amp;v=4"/>
+  </entry>
+  <entry>
+    <id>tag:github.com,2008:Repository/128923097/v5.6.7</id>
+    <updated>2026-07-05T14:15:00Z</updated>
+    <link rel="alternate" type="text/html" href="https://github.com/filamentphp/filament/releases/tag/v5.6.7"/>
+    <title>v5.6.7</title>
+    <content type="html">&lt;h2&gt;What's Changed&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;Fix form layout regression introduced in v5.6.6 by @contributor01 in #9990&lt;/li&gt;
+&lt;li&gt;Improve accessibility of the theme switcher by @contributor02 in #9991&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Full Changelog&lt;/strong&gt;: https://github.com/filamentphp/filament/compare/v5.6.6...v5.6.7&lt;/p&gt;</content>
+    <author>
+      <name>danharrin</name>
+    </author>
+    <media:thumbnail height="30" width="30" url="https://avatars.githubusercontent.com/u/41889?s=60&amp;v=4"/>
+  </entry>
+</feed>

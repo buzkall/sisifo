@@ -76,3 +76,10 @@ it('dedupes on re-fetch so a second run ingests nothing new', function() {
 
     expect(FeedItem::count())->toBe(2);
 });
+
+it('reports how many releases each run actually stored', function() {
+    fakeReleasesFeed();
+
+    expect(app(GithubReleasesIngestor::class)->ingest('filamentphp/filament'))->toBe(2)
+        ->and(app(GithubReleasesIngestor::class)->ingest('filamentphp/filament'))->toBe(0);
+});

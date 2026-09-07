@@ -1,10 +1,12 @@
 <?php
 
 use Arzcode\Sisifo\Contracts\LlmProvider;
+use Arzcode\Sisifo\Enums\MailboxTaskSourceEnum;
 use Arzcode\Sisifo\Models\FeedItem;
 use Arzcode\Sisifo\Models\InboundEmail;
 use Arzcode\Sisifo\Models\MailboxTask;
 use Arzcode\Sisifo\Services\Pushover\PushoverService;
+use Arzcode\Sisifo\Settings\MailboxSettings;
 use Arzcode\Sisifo\Tests\Support\FakeLlmProvider;
 use Illuminate\Support\Facades\Http;
 
@@ -119,4 +121,38 @@ it('truncates the changelog at the default 500-char budget', function() {
 
     // With the email-era default budget, the end marker is cut off.
     expect($fake->calls[0]['input'])->not->toContain('ENDOFCHANGELOG568');
+});
+
+it('appends each source its own common instructions and never the other source\'s', function() {
+    $settings = app(MailboxSettings::class);
+    $settings->setPromptFor(MailboxTaskSourceEnum::InboundEmail, 'EMAILBOILER');
+    $settings->setPromptFor(MailboxTaskSourceEnum::GithubReleases, 'RELEASEBOILER');
+    $settings->save();
+
+    MailboxTask::factory()->githubReleases()->create([
+        'prompt'             => 'RELEASESPECIFIC',
+        'schedule_frequency' => 'daily',
+        'schedule_time'      => '00:00',
+        'last_run_at'        => null,
+    ]);
+
+    MailboxTask::factory()->create([
+        'prompt'             => 'EMAILSPECIFIC',
+        'schedule_frequency' => 'daily',
+        'schedule_time'      => '00:00',
+        'last_run_at'        => null,
+    ]);
+
+    InboundEmail::factory()->create(['received_at' => now()->subHour()]);
+
+    fakeReleasesHttp();
+    $fake = fakeReleasesLlm(['Resumen releases.', 'Resumen correos.']);
+
+    $this->artisan('mailbox:process')->assertSuccessful();
+
+    $fake->assertPrompted(fn($prompt) => str_starts_with($prompt->instructions, "RELEASESPECIFIC\n\nRELEASEBOILER")
+        && ! str_contains($prompt->instructions, 'EMAILBOILER'));
+
+    $fake->assertPrompted(fn($prompt) => str_starts_with($prompt->instructions, "EMAILSPECIFIC\n\nEMAILBOILER")
+        && ! str_contains($prompt->instructions, 'RELEASEBOILER'));
 });

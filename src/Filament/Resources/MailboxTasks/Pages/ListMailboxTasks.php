@@ -2,6 +2,7 @@
 
 namespace Arzcode\Sisifo\Filament\Resources\MailboxTasks\Pages;
 
+use Arzcode\Sisifo\Enums\MailboxTaskSourceEnum;
 use Arzcode\Sisifo\Filament\Resources\MailboxTasks\MailboxTaskResource;
 use Arzcode\Sisifo\Settings\MailboxSettings;
 use Filament\Actions\Action;
@@ -9,6 +10,8 @@ use Filament\Actions\CreateAction;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Components\Tabs\Tab;
 
 class ListMailboxTasks extends ListRecords
 {
@@ -23,21 +26,34 @@ class ListMailboxTasks extends ListRecords
                 ->color('gray')
                 ->modalHeading(__('sisifo::sisifo.common_instructions'))
                 ->modalDescription(__('sisifo::sisifo.common_instructions_help'))
-                ->fillForm(fn(): array => [
-                    'common_prompt' => app(MailboxSettings::class)->common_prompt,
-                ])
+                ->fillForm(fn(): array => collect(MailboxTaskSourceEnum::cases())
+                    ->mapWithKeys(fn(MailboxTaskSourceEnum $source): array => [
+                        $source->value => app(MailboxSettings::class)->promptFor($source),
+                    ])
+                    ->all())
                 ->schema([
-                    Textarea::make('common_prompt')
-                        ->label(__('sisifo::sisifo.common_instructions'))
-                        ->rows(10)
-                        ->autosize()
-                        ->required(),
+                    Tabs::make()->tabs(
+                        collect(MailboxTaskSourceEnum::cases())
+                            ->map(fn(MailboxTaskSourceEnum $source): Tab => Tab::make($source->getLabel())
+                                ->schema([
+                                    Textarea::make($source->value)
+                                        ->label(__('sisifo::sisifo.common_instructions'))
+                                        ->helperText(__('sisifo::sisifo.common_instructions_source_help', [
+                                            'source' => $source->getLabel(),
+                                        ]))
+                                        ->rows(10)
+                                        ->autosize(),
+                                ]))
+                            ->all()
+                    ),
                 ])
                 ->action(function(array $data): void {
-                    $commonPrompt = $data['common_prompt'] ?? '';
-
                     $settings = app(MailboxSettings::class);
-                    $settings->common_prompt = is_string($commonPrompt) ? $commonPrompt : '';
+
+                    foreach (MailboxTaskSourceEnum::cases() as $source) {
+                        $settings->setPromptFor($source, $data[$source->value] ?? '');
+                    }
+
                     $settings->save();
 
                     Notification::make()

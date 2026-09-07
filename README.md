@@ -171,8 +171,13 @@ prompts, scheduling, and notifications work identically.
 - `github_releases` — a public repository's releases feed
   (`https://github.com/{owner}/{repo}/releases.atom`, no token, no API).
 
-To point a task at a repository, set its `source` to `github_releases` and put
-`owner/repo` in `source_ref`:
+To point a task at a repository, pick **GitHub releases** in the task's *Source*
+field and enter `owner/repo` in *Repository*. The email filters disappear — they
+only narrow the IMAP query — and a **Fetch releases now** action appears on the
+edit page, which pulls the feed and runs the task immediately instead of waiting
+for the schedule. Everything ingested is browsable read-only under **Feed items**.
+
+The same task can be created in code:
 
 ```php
 use Arzcode\Sisifo\Models\MailboxTask;

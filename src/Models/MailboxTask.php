@@ -5,6 +5,7 @@ namespace Arzcode\Sisifo\Models;
 use Arzcode\Sisifo\Contracts\SummarizableItem;
 use Arzcode\Sisifo\Database\Factories\MailboxTaskFactory;
 use Arzcode\Sisifo\Enums\MailboxTaskNotificationEnum;
+use Arzcode\Sisifo\Enums\MailboxTaskSourceEnum;
 use Arzcode\Sisifo\Enums\MailboxTaskTypeEnum;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -14,13 +15,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
-use InvalidArgumentException;
 
 /**
  * @property int $id
  * @property string $name
  * @property MailboxTaskTypeEnum $type
- * @property string $source
+ * @property MailboxTaskSourceEnum $source
  * @property string|null $source_ref
  * @property string $prompt
  * @property bool $is_active
@@ -44,14 +44,18 @@ class MailboxTask extends Model
 
     /**
      * Draws items from Sisifo's inbound-email store (the default source).
+     *
+     * Kept as a string constant for backwards compatibility — `source` is cast
+     * to {@see MailboxTaskSourceEnum}, so compare against the enum case rather
+     * than this constant. Assigning it still works through the cast.
      */
-    public const SOURCE_INBOUND_EMAIL = 'inbound_email';
+    public const SOURCE_INBOUND_EMAIL = MailboxTaskSourceEnum::InboundEmail->value;
 
     /**
      * Draws items from a public GitHub repository's releases feed; the repo is
      * stored in `source_ref` as `owner/repo`.
      */
-    public const SOURCE_GITHUB_RELEASES = 'github_releases';
+    public const SOURCE_GITHUB_RELEASES = MailboxTaskSourceEnum::GithubReleases->value;
 
     protected $table = 'mailbox_tasks';
     protected $fillable = [
@@ -77,6 +81,7 @@ class MailboxTask extends Model
     {
         return [
             'type'                 => MailboxTaskTypeEnum::class,
+            'source'               => MailboxTaskSourceEnum::class,
             'notification_methods' => AsEnumCollection::of(MailboxTaskNotificationEnum::class),
             'schedule_days'        => 'array',
             'filters'              => 'array',
@@ -144,10 +149,11 @@ class MailboxTask extends Model
      */
     public function getUnprocessedItems(): Collection
     {
+        // Exhaustive over the enum: an unknown value in the column can never
+        // reach here, the cast rejects it when the model is hydrated.
         $items = match ($this->source) {
-            self::SOURCE_INBOUND_EMAIL   => $this->getUnprocessedInboundEmails(),
-            self::SOURCE_GITHUB_RELEASES => $this->getUnprocessedFeedItems(),
-            default                      => throw new InvalidArgumentException("Unknown task source [{$this->source}]."),
+            MailboxTaskSourceEnum::InboundEmail   => $this->getUnprocessedInboundEmails(),
+            MailboxTaskSourceEnum::GithubReleases => $this->getUnprocessedFeedItems(),
         };
 
         // Normalize the source-specific collection to the contract type.
@@ -264,9 +270,8 @@ class MailboxTask extends Model
     public function markItemsAsProcessed(Collection $items): void
     {
         match ($this->source) {
-            self::SOURCE_INBOUND_EMAIL   => $this->markInboundEmailsAsProcessed($items),
-            self::SOURCE_GITHUB_RELEASES => $this->markFeedItemsAsProcessed($items),
-            default                      => throw new InvalidArgumentException("Unknown task source [{$this->source}]."),
+            MailboxTaskSourceEnum::InboundEmail   => $this->markInboundEmailsAsProcessed($items),
+            MailboxTaskSourceEnum::GithubReleases => $this->markFeedItemsAsProcessed($items),
         };
 
         $this->update(['last_run_at' => now()]);

@@ -21,11 +21,14 @@ class GithubReleasesIngestor
 
     public function __construct(private readonly GithubReleasesFeed $feed) {}
 
-    public function ingest(string $repo): void
+    /**
+     * @return int the number of releases newly stored by this call
+     */
+    public function ingest(string $repo): int
     {
-        $this->feed->fetch($repo)
+        return $this->feed->fetch($repo)
             ->reject(fn(array $entry): bool => mb_strlen($entry['body']) < self::MIN_BODY_LENGTH)
-            ->each(fn(array $entry) => FeedItem::firstOrCreate(
+            ->map(fn(array $entry): FeedItem => FeedItem::firstOrCreate(
                 ['external_id' => $entry['external_id']],
                 [
                     'title'        => $entry['title'],
@@ -34,6 +37,8 @@ class GithubReleasesIngestor
                     'body'         => $entry['body'],
                     'published_at' => $entry['published_at'],
                 ],
-            ));
+            ))
+            ->filter(fn(FeedItem $item): bool => $item->wasRecentlyCreated)
+            ->count();
     }
 }

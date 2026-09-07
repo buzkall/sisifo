@@ -6,6 +6,7 @@ use Arzcode\Sisifo\Contracts\LlmProvider;
 use Arzcode\Sisifo\Contracts\NotificationChannel;
 use Arzcode\Sisifo\Contracts\SummarizableItem;
 use Arzcode\Sisifo\Enums\MailboxTaskNotificationEnum;
+use Arzcode\Sisifo\Enums\MailboxTaskSourceEnum;
 use Arzcode\Sisifo\Models\InboundEmail;
 use Arzcode\Sisifo\Models\MailboxTask;
 use Arzcode\Sisifo\Services\GithubReleases\GithubReleasesIngestor;
@@ -302,7 +303,7 @@ class ProcessMailbox extends Command
      */
     private function ingestExternalItems(MailboxTask $task): void
     {
-        if ($task->source !== MailboxTask::SOURCE_GITHUB_RELEASES || $task->source_ref === null) {
+        if ($task->source !== MailboxTaskSourceEnum::GithubReleases || $task->source_ref === null) {
             return;
         }
 
@@ -338,7 +339,7 @@ class ProcessMailbox extends Command
                     . "Contenido: {$body}\n";
             })->implode("\n---\n");
 
-            $commonPrompt = trim(app(MailboxSettings::class)->common_prompt);
+            $commonPrompt = app(MailboxSettings::class)->promptFor($task->source);
             $skipInstruction = 'If after analyzing the emails there is nothing relevant to report, respond ONLY with the literal text '
                 . self::SKIP_SENTINEL . ' and nothing else.';
             $fullPrompt = trim(trim($task->prompt)

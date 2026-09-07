@@ -2,6 +2,7 @@
 
 namespace Arzcode\Sisifo\Filament\Resources\MailboxTasks\Actions;
 
+use Arzcode\Sisifo\Enums\MailboxTaskSourceEnum;
 use Arzcode\Sisifo\Enums\MailboxTaskTypeEnum;
 use Arzcode\Sisifo\Models\MailboxTask;
 use Filament\Actions\Action;
@@ -17,7 +18,9 @@ class ForceFetchEmailsAction
             ->label(__('sisifo::sisifo.force_fetch_emails'))
             ->icon(Heroicon::OutlinedArrowPath)
             ->color('warning')
-            ->visible(fn(MailboxTask $record): bool => $record->type === MailboxTaskTypeEnum::Watch)
+            // IMAP-only: the throttle key it clears means nothing to a feed source.
+            ->visible(fn(MailboxTask $record): bool => $record->type === MailboxTaskTypeEnum::Watch
+                && $record->source === MailboxTaskSourceEnum::InboundEmail)
             ->requiresConfirmation()
             ->modalDescription(__('sisifo::sisifo.force_fetch_confirm'))
             ->action(function(MailboxTask $record, Component $livewire): void {

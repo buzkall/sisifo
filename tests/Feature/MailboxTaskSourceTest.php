@@ -1,6 +1,7 @@
 <?php
 
 use Arzcode\Sisifo\Contracts\SummarizableItem;
+use Arzcode\Sisifo\Enums\MailboxTaskSourceEnum;
 use Arzcode\Sisifo\Enums\MailboxTaskTypeEnum;
 use Arzcode\Sisifo\Models\InboundEmail;
 use Arzcode\Sisifo\Models\MailboxTask;
@@ -16,7 +17,7 @@ it('defaults the source column to inbound_email at the database level', function
         'updated_at' => now(),
     ]);
 
-    expect(MailboxTask::findOrFail($id)->source)->toBe(MailboxTask::SOURCE_INBOUND_EMAIL);
+    expect(MailboxTask::findOrFail($id)->source)->toBe(MailboxTaskSourceEnum::InboundEmail);
 });
 
 it('selects unprocessed items through the source-neutral method', function() {
@@ -55,8 +56,14 @@ it('does not reselect items already processed by another summary task', function
         ->and($taskB->getUnprocessedItems())->toHaveCount(0);
 });
 
-it('throws for an unknown source', function() {
-    $task = MailboxTask::factory()->create(['source' => 'github_release']);
+// The enum cast rejects an unknown source at assignment, so a typo can never
+// reach the dispatch in getUnprocessedItems() in the first place.
+it('rejects an unknown source', function() {
+    MailboxTask::factory()->create(['source' => 'github_release']);
+})->throws(ValueError::class);
 
-    $task->getUnprocessedItems();
-})->throws(InvalidArgumentException::class, 'Unknown task source [github_release].');
+it('still accepts the raw string constants for backwards compatibility', function() {
+    $task = MailboxTask::factory()->create(['source' => MailboxTask::SOURCE_GITHUB_RELEASES]);
+
+    expect($task->fresh()->source)->toBe(MailboxTaskSourceEnum::GithubReleases);
+});

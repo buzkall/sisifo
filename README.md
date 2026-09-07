@@ -73,7 +73,29 @@ SISIFO_IMAP_PORT=993
 SISIFO_IMAP_ENCRYPTION=ssl
 SISIFO_IMAP_USERNAME=watcher@example.com
 SISIFO_IMAP_PASSWORD=secret
+SISIFO_IMAP_TIMEOUT=60                 # socket timeout in seconds
+SISIFO_IMAP_RETRY_ATTEMPTS=3           # attempts per fetch before giving up
+SISIFO_IMAP_RETRY_DELAY_SECONDS=5      # base backoff, multiplied by the attempt number
 ```
+
+#### Transient connection failures
+
+`webklex/php-imap` collapses every socket-level failure during `LOGIN` — a dropped
+connection, a read timeout — into a single `AuthFailedException("failed to
+authenticate")`, which reads like rejected credentials but is not: a genuinely
+rejected login surfaces as `ImapServerErrorException` with the server's `NO`
+response instead.
+
+Sisifo therefore retries those transient failures (`retry_attempts`, with a linear
+backoff), never retries a server-side rejection, and logs the full exception chain
+so the actual cause (`RuntimeException: empty response`, say) reaches your error
+tracker instead of the misleading top-level message.
+
+The fetch throttle is armed after every check, successful or not. Without that, a
+single failed connection would make the every-minute scheduled command reconnect
+each minute until it succeeded — which is exactly how a provider like Fastmail
+starts rate limiting the account. Use the **Force fetch** action on a watch task to
+bypass the throttle on demand.
 
 ### LLM
 

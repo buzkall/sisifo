@@ -36,16 +36,27 @@ return [
     |--------------------------------------------------------------------------
     | IMAP Connection
     |--------------------------------------------------------------------------
+    |
+    | `timeout` is the socket timeout in seconds handed to webklex/php-imap
+    | (its own default is 30). A fetch that fails for a transient reason — a
+    | dropped socket or a read timeout, both of which the library reports as
+    | "failed to authenticate" — is retried `retry_attempts` times, waiting
+    | `retry_delay_seconds` multiplied by the attempt number in between.
+    | A server that actively rejects the login is never retried.
+    |
     */
 
     'imap' => [
-        'host'          => env('SISIFO_IMAP_HOST', env('MAILBOX_IMAP_HOST', env('MAILBOX_HOST'))),
-        'port'          => env('SISIFO_IMAP_PORT', env('MAILBOX_PORT', 993)),
-        'encryption'    => env('SISIFO_IMAP_ENCRYPTION', env('MAILBOX_ENCRYPTION', 'ssl')),
-        'validate_cert' => env('SISIFO_IMAP_VALIDATE_CERT', env('MAILBOX_VALIDATE_CERT', true)),
-        'username'      => env('SISIFO_IMAP_USERNAME', env('MAILBOX_USERNAME')),
-        'password'      => env('SISIFO_IMAP_PASSWORD', env('MAILBOX_PASSWORD')),
-        'protocol'      => env('SISIFO_IMAP_PROTOCOL', 'imap'),
+        'host'                => env('SISIFO_IMAP_HOST', env('MAILBOX_IMAP_HOST', env('MAILBOX_HOST'))),
+        'port'                => env('SISIFO_IMAP_PORT', env('MAILBOX_PORT', 993)),
+        'encryption'          => env('SISIFO_IMAP_ENCRYPTION', env('MAILBOX_ENCRYPTION', 'ssl')),
+        'validate_cert'       => env('SISIFO_IMAP_VALIDATE_CERT', env('MAILBOX_VALIDATE_CERT', true)),
+        'username'            => env('SISIFO_IMAP_USERNAME', env('MAILBOX_USERNAME')),
+        'password'            => env('SISIFO_IMAP_PASSWORD', env('MAILBOX_PASSWORD')),
+        'protocol'            => env('SISIFO_IMAP_PROTOCOL', 'imap'),
+        'timeout'             => (int)env('SISIFO_IMAP_TIMEOUT', 60),
+        'retry_attempts'      => (int)env('SISIFO_IMAP_RETRY_ATTEMPTS', 3),
+        'retry_delay_seconds' => (int)env('SISIFO_IMAP_RETRY_DELAY_SECONDS', 5),
     ],
 
     /*

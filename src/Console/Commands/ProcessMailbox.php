@@ -14,9 +14,14 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
 use League\HTMLToMarkdown\HtmlConverter;
+use Throwable;
+use Webklex\PHPIMAP\Client;
 use Webklex\PHPIMAP\ClientManager;
+use Webklex\PHPIMAP\Exceptions\ImapServerErrorException;
+use Webklex\PHPIMAP\Folder;
 use Webklex\PHPIMAP\Message;
 
 class ProcessMailbox extends Command
@@ -62,12 +67,49 @@ class ProcessMailbox extends Command
         $this->info('Checking mailbox...');
 
         try {
-            $this->fetchEmails();
-            Cache::put($cacheKey, now()->toIso8601String(), now()->addHours(24));
+            $this->fetchEmailsWithRetries();
             $this->info('Mailbox check completed.');
         } catch (Exception $e) {
             $this->error("Mailbox check error: {$e->getMessage()}");
-            Log::error('Mailbox fetch error: ' . $e->getMessage());
+            Log::error('Mailbox fetch error: ' . $this->describeThrowable($e), ['exception' => $e]);
+        } finally {
+            // Arm the throttle whatever the outcome. The command is scheduled
+            // every minute, so leaving the key unset after a failure retries
+            // the broken connection every 60s and gets the account throttled.
+            Cache::put($cacheKey, now()->toIso8601String(), now()->addHours(24));
+        }
+    }
+
+    /**
+     * Retry transient IMAP failures — dropped sockets and read timeouts, which
+     * webklex/php-imap reports as AuthFailedException("failed to authenticate")
+     * — before giving up. An ImapServerErrorException means the server actively
+     * answered NO/BAD/BYE (rejected credentials, too many connections), so it is
+     * rethrown immediately instead of hammering the server.
+     *
+     * @throws Exception
+     */
+    private function fetchEmailsWithRetries(): void
+    {
+        $attempts = max(1, (int)config('sisifo.imap.retry_attempts', 3));
+        $delaySeconds = max(0, (int)config('sisifo.imap.retry_delay_seconds', 5));
+
+        for ($attempt = 1; $attempt <= $attempts; $attempt++) {
+            try {
+                $this->fetchEmails();
+
+                return;
+            } catch (ImapServerErrorException $e) {
+                throw $e;
+            } catch (Exception $e) {
+                if ($attempt >= $attempts) {
+                    throw $e;
+                }
+
+                $this->warn("Mailbox check attempt {$attempt}/{$attempts} failed: {$e->getMessage()}. Retrying...");
+
+                Sleep::for($delaySeconds * $attempt)->seconds();
+            }
         }
     }
 
@@ -81,12 +123,22 @@ class ProcessMailbox extends Command
             'username'      => config('sisifo.imap.username'),
             'password'      => config('sisifo.imap.password'),
             'protocol'      => config('sisifo.imap.protocol'),
+            'timeout'       => (int)config('sisifo.imap.timeout', 60),
         ];
 
         $client = app(ClientManager::class)->make($config);
-        $client->connect();
-        $folder = $client->getFolder('INBOX');
 
+        try {
+            $client->connect();
+
+            $this->storeMessages($client->getFolder('INBOX'));
+        } finally {
+            $this->disconnectQuietly($client);
+        }
+    }
+
+    private function storeMessages(Folder $folder): void
+    {
         $lastEmail = InboundEmail::latest('received_at')->first();
         $messages = $folder->messages()
             ->whereUnseen()
@@ -113,6 +165,34 @@ class ProcessMailbox extends Command
                 Log::error('Email processing error: ' . $e->getMessage());
             }
         }
+    }
+
+    /**
+     * Releasing the IMAP connection must never mask the error that got us here.
+     */
+    private function disconnectQuietly(Client $client): void
+    {
+        try {
+            $client->disconnect();
+        } catch (Throwable $e) {
+            Log::debug('Mailbox disconnect error: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Flatten an exception chain into a single line. webklex/php-imap collapses
+     * every transient socket failure into AuthFailedException("failed to
+     * authenticate"), so only the previous exception says what really happened.
+     */
+    private function describeThrowable(Throwable $e): string
+    {
+        $descriptions = [];
+
+        for ($current = $e; $current !== null; $current = $current->getPrevious()) {
+            $descriptions[] = $current::class . ': ' . ($current->getMessage() ?: '(no message)');
+        }
+
+        return implode(' <- ', $descriptions);
     }
 
     private function extractTextBody(Message $message): string

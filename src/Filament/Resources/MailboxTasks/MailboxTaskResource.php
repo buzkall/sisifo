@@ -36,7 +36,11 @@ class MailboxTaskResource extends Resource
     {
         $group = config('sisifo.navigation_group');
 
-        return is_string($group) ? __($group) : $group;
+        if (is_string($group)) {
+            return __($group);
+        }
+
+        return $group instanceof UnitEnum ? $group : null;
     }
 
     public static function getActiveNavigationIcon(): string|Heroicon|null
@@ -49,7 +53,9 @@ class MailboxTaskResource extends Resource
             if (str_starts_with($iconName, 'Outlined')) {
                 $solidName = substr($iconName, 8);
 
-                return constant(Heroicon::class . '::' . $solidName);
+                $solidIcon = constant(Heroicon::class . '::' . $solidName);
+
+                return $solidIcon instanceof Heroicon ? $solidIcon : $icon;
             }
 
             return $icon;

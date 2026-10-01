@@ -3,18 +3,23 @@
 namespace Arzcode\Sisifo\Llm\Drivers;
 
 use Arzcode\Sisifo\Contracts\LlmProvider;
-use LogicException;
+use Arzcode\Sisifo\Llm\Agents\TaskAgent;
+use Arzcode\Sisifo\Support\ConfigValue;
 
-/**
- * Stub driver. Kept as a seam for a future migration back to laravel/ai.
- * Not currently implemented — selecting this driver will throw at runtime.
- */
 class LaravelAiDriver implements LlmProvider
 {
     public function text(string $instructions, string $input, ?int $maxTokens = null): string
     {
-        throw new LogicException(
-            'LaravelAiDriver is a stub. Bind your own implementation or switch sisifo.llm.driver to "prism".'
-        );
+        $provider = config('sisifo.llm.provider');
+        $model = config('sisifo.llm.model');
+
+        $response = new TaskAgent($instructions, $maxTokens ?? ConfigValue::int('sisifo.llm.max_tokens', 2048))
+            ->prompt(
+                $input,
+                provider: is_string($provider) || is_array($provider) ? $provider : null,
+                model: is_string($model) ? $model : null,
+            );
+
+        return $response->text;
     }
 }

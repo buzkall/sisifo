@@ -34,8 +34,10 @@ class ListMailboxTasks extends ListRecords
                         ->required(),
                 ])
                 ->action(function(array $data): void {
+                    $commonPrompt = $data['common_prompt'] ?? '';
+
                     $settings = app(MailboxSettings::class);
-                    $settings->common_prompt = $data['common_prompt'];
+                    $settings->common_prompt = is_string($commonPrompt) ? $commonPrompt : '';
                     $settings->save();
 
                     Notification::make()

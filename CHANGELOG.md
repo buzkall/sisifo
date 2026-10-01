@@ -5,7 +5,26 @@ All notable changes to `sisifo` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.9] - 2026-10-01
+
+### Added
+
+- Filament 4 support (4.7+), alongside Filament 5 (5.2+).
+
+### Changed
+
+- **Breaking:** the LLM now runs through the [Laravel AI SDK](https://laravel.com/docs/ai-sdk) (`laravel/ai` ^1.0) instead of Prism PHP, and `prism-php/prism` is no longer required. When upgrading:
+  - Provider credentials are read from `config/ai.php` instead of `config/prism.php`. The env names are the same (`ANTHROPIC_API_KEY`, …), so most apps need no change.
+  - `sisifo.llm.driver` defaults to `laravel-ai`. The `prism` driver was removed: drop `SISIFO_LLM_DRIVER=prism` from your environment, or bind your own `LlmProvider` to keep using Prism.
+  - The LLM request timeout is now the SDK's 60 seconds, up from Prism's 30.
+- Minimum PHP version is now 8.4.
+- Test suite upgraded to Pest 5.
+- Static analysis raised from PHPStan level 5 to level 10.
+
+### Fixed
+
+- `mailbox:process` reports a missing `INBOX` folder as a logged mailbox error instead of crashing with a `TypeError`.
+- The Pushover preview no longer renders empty when a sanitizing regex fails; it falls back to the escaped text.
 
 ## [0.1.8] - 2026-09-07
 

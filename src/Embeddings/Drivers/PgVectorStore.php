@@ -28,6 +28,7 @@ class PgVectorStore implements EmbeddingStore
     {
         $vector = '[' . implode(',', $embedding) . ']';
 
+        /** @var array<int, object{id: int|string, content: string, distance: float|string}> $rows */
         $rows = DB::select(
             'SELECT id, content, embedding <=> ?::vector AS distance
              FROM sisifo_memories

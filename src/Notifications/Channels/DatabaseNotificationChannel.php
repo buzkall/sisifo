@@ -5,6 +5,9 @@ namespace Arzcode\Sisifo\Notifications\Channels;
 use Arzcode\Sisifo\Contracts\NotificationChannel;
 use Arzcode\Sisifo\Models\MailboxTask;
 use Filament\Notifications\Notification;
+use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 
 class DatabaseNotificationChannel implements NotificationChannel
 {
@@ -12,14 +15,22 @@ class DatabaseNotificationChannel implements NotificationChannel
     {
         $notifiable = $this->resolveNotifiable();
 
-        if ($notifiable === null) {
+        $recipients = match (true) {
+            $notifiable instanceof Model,
+            $notifiable instanceof Authenticatable,
+            $notifiable instanceof Collection => $notifiable,
+            is_array($notifiable)             => collect($notifiable),
+            default                           => null,
+        };
+
+        if ($recipients === null) {
             return;
         }
 
         Notification::make()
             ->title($title)
             ->body($body)
-            ->sendToDatabase($notifiable);
+            ->sendToDatabase($recipients);
     }
 
     /**

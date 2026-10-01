@@ -9,9 +9,9 @@ use Arzcode\Sisifo\Embeddings\Drivers\MariaDbVectorStore;
 use Arzcode\Sisifo\Embeddings\Drivers\MysqlBruteForceStore;
 use Arzcode\Sisifo\Embeddings\Drivers\PgVectorStore;
 use Arzcode\Sisifo\Llm\Drivers\LaravelAiDriver;
-use Arzcode\Sisifo\Llm\Drivers\PrismDriver;
 use Arzcode\Sisifo\Settings\MailboxSettings;
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
 use LogicException;
@@ -26,10 +26,12 @@ class SisifoServiceProvider extends ServiceProvider
         $this->registerMailboxSettings();
 
         $this->app->bind(LlmProvider::class, function() {
-            return match (config('sisifo.llm.driver')) {
-                'prism'      => new PrismDriver,
+            $driver = config('sisifo.llm.driver');
+
+            return match ($driver) {
                 'laravel-ai' => new LaravelAiDriver,
-                default      => throw new LogicException('Unknown sisifo.llm.driver: ' . config('sisifo.llm.driver')),
+                'prism'      => throw new LogicException('The "prism" sisifo.llm.driver was removed in 0.2.0. Set SISIFO_LLM_DRIVER=laravel-ai or bind your own LlmProvider.'),
+                default      => throw new LogicException('Unknown sisifo.llm.driver: ' . (is_string($driver) ? $driver : get_debug_type($driver))),
             };
         });
 
@@ -80,8 +82,10 @@ class SisifoServiceProvider extends ServiceProvider
         }
 
         $this->app->afterResolving(Schedule::class, function(Schedule $schedule) {
+            $environments = config('sisifo.schedule.environments', ['production']);
+
             $schedule->command('mailbox:process')
-                ->environments(config('sisifo.schedule.environments', ['production']))
+                ->environments(is_array($environments) || is_string($environments) ? $environments : ['production'])
                 ->everyMinute()
                 ->withoutOverlapping();
         });
@@ -89,7 +93,7 @@ class SisifoServiceProvider extends ServiceProvider
 
     private function mergeSettingsMigrationsPaths(): void
     {
-        $existing = config('settings.migrations_paths', []);
+        $existing = Arr::wrap(config('settings.migrations_paths', []));
         $packagePath = __DIR__ . '/../database/settings';
 
         if (! in_array($packagePath, $existing, true)) {
@@ -99,7 +103,7 @@ class SisifoServiceProvider extends ServiceProvider
 
     private function registerMailboxSettings(): void
     {
-        $existing = config('settings.settings', []);
+        $existing = Arr::wrap(config('settings.settings', []));
 
         if (! in_array(MailboxSettings::class, $existing, true)) {
             config()->set('settings.settings', array_merge($existing, [MailboxSettings::class]));

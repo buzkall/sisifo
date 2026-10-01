@@ -21,6 +21,7 @@ use Filament\Widgets\WidgetsServiceProvider;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;
+use Laravel\Ai\AiServiceProvider;
 use Livewire\LivewireServiceProvider;
 use Orchestra\Testbench\TestCase as BaseTestCase;
 use Spatie\LaravelSettings\LaravelSettingsServiceProvider;
@@ -91,6 +92,7 @@ abstract class TestCase extends BaseTestCase
             WidgetsServiceProvider::class,
             FilamentServiceProvider::class,
             LivewireServiceProvider::class,
+            AiServiceProvider::class,
             SisifoServiceProvider::class,
             TestPanelProvider::class,
         ];

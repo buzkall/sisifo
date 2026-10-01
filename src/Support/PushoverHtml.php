@@ -14,9 +14,9 @@ class PushoverHtml
     {
         $escaped = e($html);
 
-        $escaped = preg_replace('~&lt;(/?)(b|i|u)&gt;~i', '<$1$2>', $escaped);
-        $escaped = preg_replace('~&lt;br\s*/?&gt;~i', '<br>', $escaped);
-        $escaped = preg_replace('~&lt;hr\s*/?&gt;~i', '<hr>', $escaped);
+        $escaped = preg_replace('~&lt;(/?)(b|i|u)&gt;~i', '<$1$2>', $escaped) ?? $escaped;
+        $escaped = preg_replace('~&lt;br\s*/?&gt;~i', '<br>', $escaped) ?? $escaped;
+        $escaped = preg_replace('~&lt;hr\s*/?&gt;~i', '<hr>', $escaped) ?? $escaped;
 
         $escaped = preg_replace_callback(
             '~&lt;a href=(?:&quot;|&#039;)(.*?)(?:&quot;|&#039;)&gt;(.*?)&lt;/a&gt;~is',
@@ -30,7 +30,7 @@ class PushoverHtml
                 return '<a href="' . e($url) . '" target="_blank" rel="noopener noreferrer">' . $match[2] . '</a>';
             },
             $escaped
-        );
+        ) ?? $escaped;
 
         return nl2br($escaped);
     }

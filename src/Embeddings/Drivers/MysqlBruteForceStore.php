@@ -36,6 +36,8 @@ class MysqlBruteForceStore implements EmbeddingStore
             ->get();
 
         $scored = $rows->map(function($row) use ($embedding) {
+            /** @var object{id: int|string, content: string, embedding: mixed} $row */
+            /** @var array<int, float>|null $stored */
             $stored = is_string($row->embedding) ? json_decode($row->embedding, true) : [];
 
             return [

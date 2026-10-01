@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Casts\AsEnumCollection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 
@@ -26,7 +27,7 @@ use InvalidArgumentException;
  * @property string|null $schedule_frequency
  * @property array<int, int>|null $schedule_days
  * @property string|null $schedule_time
- * @property string|null $schedule_timezone
+ * @property string $schedule_timezone
  * @property array<string, mixed>|null $filters
  * @property Collection<int, MailboxTaskNotificationEnum>|null $notification_methods
  * @property bool $is_urgent
@@ -37,6 +38,7 @@ use InvalidArgumentException;
  */
 class MailboxTask extends Model
 {
+    /** @use HasFactory<MailboxTaskFactory> */
     use HasFactory;
 
     /**
@@ -82,22 +84,37 @@ class MailboxTask extends Model
         return MailboxTaskFactory::new();
     }
 
+    /**
+     * @return BelongsToMany<InboundEmail, $this>
+     */
     public function processedEmails(): BelongsToMany
     {
         return $this->belongsToMany(InboundEmail::class, 'mailbox_task_inbound_email')
             ->withPivot('processed_at');
     }
 
+    /**
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
     }
 
+    /**
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
     public function scopeSummary(Builder $query): Builder
     {
         return $query->where('type', MailboxTaskTypeEnum::Summary);
     }
 
+    /**
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
     public function scopeWatch(Builder $query): Builder
     {
         return $query->where('type', MailboxTaskTypeEnum::Watch);
@@ -141,7 +158,7 @@ class MailboxTask extends Model
         $this->applyFilters($query);
 
         $lookBackDays = $this->filters['look_back_days'] ?? 7;
-        $query->receivedAfter(now()->subDays($lookBackDays));
+        $query->receivedAfter(now()->subDays(is_numeric($lookBackDays) ? (int)$lookBackDays : 7));
 
         return $query->orderBy('received_at')->get();
     }
@@ -221,31 +238,50 @@ class MailboxTask extends Model
         $this->processedEmails()->attach($pivotData);
     }
 
+    /**
+     * @param  Builder<InboundEmail>  $query
+     */
     private function applyFilters(Builder $query): void
     {
-        $filters = collect($this->filters ?? [])
-            ->map(fn(mixed $value) => collect($value))
-            ->filter(fn(Collection $value) => $value->isNotEmpty());
+        $addresses = $this->filterValues('from_addresses');
+        $domains = $this->filterValues('from_domains');
+        $keywords = $this->filterValues('subject_keywords');
 
         $query
             ->when(
-                $filters->get('from_addresses'),
-                fn(Builder $q, Collection $addresses) => $q->whereIn('from_address', $addresses)
+                $addresses->isNotEmpty(),
+                fn(Builder $q) => $q->whereIn('from_address', $addresses)
             )
             ->when(
-                $filters->get('from_domains'),
-                fn(Builder $q, Collection $domains) => $q
+                $domains->isNotEmpty(),
+                fn(Builder $q) => $q
                     ->where(function(Builder $q) use ($domains) {
                         $domains->each(fn(string $domain) => $q->orWhereLike('from_address', "%@$domain"));
                     })
             )
             ->when(
-                $filters->get('subject_keywords'),
-                fn(Builder $q, Collection $keywords) => $q
+                $keywords->isNotEmpty(),
+                fn(Builder $q) => $q
                     ->where(function(Builder $q) use ($keywords) {
                         $keywords->each(fn(string $keyword) => $q->orWhereLike('subject', "%$keyword%"));
                     })
             );
+    }
+
+    /**
+     * @return Collection<int, string>
+     */
+    private function filterValues(string $key): Collection
+    {
+        $values = [];
+
+        foreach (Arr::wrap($this->filters[$key] ?? []) as $value) {
+            if (is_string($value) || is_numeric($value)) {
+                $values[] = (string)$value;
+            }
+        }
+
+        return collect($values);
     }
 
     private function isDayAllowed(Carbon $now): bool

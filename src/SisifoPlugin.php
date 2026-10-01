@@ -10,7 +10,10 @@ class SisifoPlugin implements Plugin
 {
     public static function make(): static
     {
-        return app(static::class);
+        /** @var static $plugin */
+        $plugin = app(static::class);
+
+        return $plugin;
     }
 
     public function getId(): string

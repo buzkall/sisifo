@@ -28,6 +28,7 @@ class MariaDbVectorStore implements EmbeddingStore
     {
         $json = json_encode($embedding);
 
+        /** @var array<int, object{id: int|string, content: string, distance: float|string}> $rows */
         $rows = DB::select(
             'SELECT id, content, VEC_DISTANCE_COSINE(embedding, VEC_FromText(?)) AS distance
              FROM sisifo_memories

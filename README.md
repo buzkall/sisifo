@@ -3,9 +3,9 @@
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/arzcode/sisifo.svg)](https://packagist.org/packages/arzcode/sisifo)
 [![License](https://img.shields.io/packagist/l/arzcode/sisifo.svg)](LICENSE.md)
 
-A Filament v5 plugin that turns an IMAP mailbox into an autonomous, LLM-powered watcher and summarizer.
+A Filament v4/v5 plugin that turns an IMAP mailbox into an autonomous, LLM-powered watcher and summarizer.
 
-Sisifo polls a single IMAP account, persists incoming messages, and runs scheduled or watch-style **mailbox tasks** that ask an LLM (Prism PHP by default) to summarize, classify, or extract information from new emails — then dispatches notifications through configurable channels (Pushover, Filament database notifications, …).
+Sisifo polls a single IMAP account, persists incoming messages, and runs scheduled or watch-style **mailbox tasks** that ask an LLM (through the Laravel AI SDK by default) to summarize, classify, or extract information from new emails — then dispatches notifications through configurable channels (Pushover, Filament database notifications, …).
 
 Like its namesake Sisyphus, it keeps rolling through the inbox so you don't have to.
 
@@ -15,7 +15,7 @@ Like its namesake Sisyphus, it keeps rolling through the inbox so you don't have
 - **Two task types**
   - **Summary** — runs on a daily/hourly schedule and digests everything new since it last ran.
   - **Watch** — fires continuously, reacting to matching emails as soon as they arrive.
-- **LLM-driven processing** via a swappable `LlmProvider` contract (Prism PHP driver included).
+- **LLM-driven processing** via a swappable `LlmProvider` contract (Laravel AI SDK driver included).
 - **Filament resource** to create and manage tasks from your panel.
 - **Pluggable notification channels** — Pushover and Filament database notifications out of the box.
 - **Per-task filtering** by sender address, sender domain, subject keywords, and look-back window.
@@ -25,11 +25,11 @@ Like its namesake Sisyphus, it keeps rolling through the inbox so you don't have
 
 ## Requirements
 
-- PHP 8.3+
+- PHP 8.4+
 - Laravel 13
-- Filament 5
+- Filament 4.7+ or 5.2+
 - An IMAP-accessible mailbox
-- An LLM provider supported by [Prism PHP](https://prismphp.com) (Anthropic by default)
+- An LLM provider supported by the [Laravel AI SDK](https://laravel.com/docs/ai-sdk) (Anthropic by default)
 
 ## Installation
 
@@ -100,13 +100,13 @@ bypass the throttle on demand.
 ### LLM
 
 ```dotenv
-SISIFO_LLM_DRIVER=prism            # 'prism' (default) or 'laravel-ai' (stub, not wired)
+SISIFO_LLM_DRIVER=laravel-ai      # the only bundled driver
 SISIFO_LLM_PROVIDER=anthropic
 SISIFO_LLM_MODEL=claude-haiku-4-5
 SISIFO_LLM_MAX_TOKENS=2048
 ```
 
-The `prism` driver delegates to [Prism PHP](https://prismphp.com), so configure your provider credentials (e.g. your Anthropic API key) as Prism expects.
+The `laravel-ai` driver delegates to the [Laravel AI SDK](https://laravel.com/docs/ai-sdk), which is installed with the package. `SISIFO_LLM_PROVIDER` is the name of a provider in `config/ai.php`, so configure its credentials as the SDK expects — for Anthropic, setting `ANTHROPIC_API_KEY` is enough; publishing `config/ai.php` is optional.
 
 ### Schedule
 

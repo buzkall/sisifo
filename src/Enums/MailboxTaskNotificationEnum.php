@@ -2,6 +2,7 @@
 
 namespace Arzcode\Sisifo\Enums;
 
+use Arzcode\Sisifo\Contracts\NotificationChannel;
 use Arzcode\Sisifo\Notifications\Channels\DatabaseNotificationChannel;
 use Arzcode\Sisifo\Notifications\Channels\PushoverChannel;
 use Arzcode\Sisifo\Traits\HasEnumFunctions;
@@ -22,6 +23,9 @@ enum MailboxTaskNotificationEnum: string implements HasLabel
         };
     }
 
+    /**
+     * @return class-string<NotificationChannel>
+     */
     public function toChannelClass(): string
     {
         return match ($this) {

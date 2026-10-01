@@ -9,6 +9,7 @@ use Arzcode\Sisifo\Enums\MailboxTaskNotificationEnum;
 use Arzcode\Sisifo\Models\InboundEmail;
 use Arzcode\Sisifo\Models\MailboxTask;
 use Arzcode\Sisifo\Settings\MailboxSettings;
+use Arzcode\Sisifo\Support\ConfigValue;
 use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
@@ -17,7 +18,9 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
 use League\HTMLToMarkdown\HtmlConverter;
+use RuntimeException;
 use Throwable;
+use Webklex\PHPIMAP\Address;
 use Webklex\PHPIMAP\Client;
 use Webklex\PHPIMAP\ClientManager;
 use Webklex\PHPIMAP\Exceptions\ImapServerErrorException;
@@ -35,7 +38,9 @@ class ProcessMailbox extends Command
     {
         $this->fetchEmailsIfDue();
 
-        if ($taskId = $this->option('task')) {
+        $taskId = $this->option('task');
+
+        if ((is_string($taskId) || is_int($taskId)) && $taskId) {
             $task = MailboxTask::find($taskId);
 
             if (! $task) {
@@ -55,12 +60,12 @@ class ProcessMailbox extends Command
 
     private function fetchEmailsIfDue(): void
     {
-        $intervalMinutes = (int)config('sisifo.schedule.check_every_minutes', 15);
+        $intervalMinutes = ConfigValue::int('sisifo.schedule.check_every_minutes', 15);
         $cacheKey = 'mailbox:last_fetch';
 
         $lastFetch = Cache::get($cacheKey);
 
-        if ($lastFetch && Carbon::parse($lastFetch)->diffInMinutes(now()) < $intervalMinutes) {
+        if (is_string($lastFetch) && $lastFetch && Carbon::parse($lastFetch)->diffInMinutes(now()) < $intervalMinutes) {
             return;
         }
 
@@ -91,8 +96,8 @@ class ProcessMailbox extends Command
      */
     private function fetchEmailsWithRetries(): void
     {
-        $attempts = max(1, (int)config('sisifo.imap.retry_attempts', 3));
-        $delaySeconds = max(0, (int)config('sisifo.imap.retry_delay_seconds', 5));
+        $attempts = max(1, ConfigValue::int('sisifo.imap.retry_attempts', 3));
+        $delaySeconds = max(0, ConfigValue::int('sisifo.imap.retry_delay_seconds', 5));
 
         for ($attempt = 1; $attempt <= $attempts; $attempt++) {
             try {
@@ -123,7 +128,7 @@ class ProcessMailbox extends Command
             'username'      => config('sisifo.imap.username'),
             'password'      => config('sisifo.imap.password'),
             'protocol'      => config('sisifo.imap.protocol'),
-            'timeout'       => (int)config('sisifo.imap.timeout', 60),
+            'timeout'       => ConfigValue::int('sisifo.imap.timeout', 60),
         ];
 
         $client = app(ClientManager::class)->make($config);
@@ -131,7 +136,10 @@ class ProcessMailbox extends Command
         try {
             $client->connect();
 
-            $this->storeMessages($client->getFolder('INBOX'));
+            $folder = $client->getFolder('INBOX')
+                ?? throw new RuntimeException('The INBOX folder was not found on the IMAP server.');
+
+            $this->storeMessages($folder);
         } finally {
             $this->disconnectQuietly($client);
         }
@@ -142,17 +150,24 @@ class ProcessMailbox extends Command
         $lastEmail = InboundEmail::latest('received_at')->first();
         $messages = $folder->messages()
             ->whereUnseen()
-            ->whereSince($lastEmail?->received_at ?? now()->subDay())
+            ->whereSince($lastEmail->received_at ?? now()->subDay())
             ->get();
 
+        /** @var Message $message */
         foreach ($messages as $message) {
             try {
+                $from = $message->getFrom()->first();
+
+                if (! $from instanceof Address) {
+                    throw new RuntimeException('The message has no sender address.');
+                }
+
                 InboundEmail::firstOrCreate(
                     ['message_id' => $message->getMessageId()],
                     [
                         'subject'      => Str::limit((string)$message->getSubject(), 252),
-                        'from_address' => $message->getFrom()[0]->mail,
-                        'from_name'    => $message->getFrom()[0]->personal ?? '',
+                        'from_address' => $from->mail,
+                        'from_name'    => $from->personal,
                         'message'      => $message->getRawBody(),
                         'text_body'    => $this->extractTextBody($message),
                         'received_at'  => $message->getDate()->toDate(),
@@ -246,7 +261,7 @@ class ProcessMailbox extends Command
         $task->markAttempted();
 
         try {
-            $bodyBudget = (int)config('sisifo.llm.item_body_budget', 500);
+            $bodyBudget = ConfigValue::int('sisifo.llm.item_body_budget', 500);
 
             $itemsText = $items->map(function(SummarizableItem $item) use ($bodyBudget) {
                 $body = Str::limit($item->sisifoBody(), $bodyBudget);
@@ -268,7 +283,7 @@ class ProcessMailbox extends Command
                 ? "\n\n---\nResultado del último envío (para comparar y destacar solo lo nuevo):\n" . Str::limit($task->last_result, 1024)
                 : '';
 
-            $maxTokens = (int)config('sisifo.llm.max_tokens', 2048);
+            $maxTokens = ConfigValue::int('sisifo.llm.max_tokens', 2048);
 
             $responseText = $llm->text($fullPrompt, $itemsText . $previousResult, $maxTokens);
 
@@ -325,6 +340,9 @@ class ProcessMailbox extends Command
 
     private function resolveChannel(MailboxTaskNotificationEnum $method): NotificationChannel
     {
-        return app($method->toChannelClass());
+        /** @var NotificationChannel $channel */
+        $channel = app($method->toChannelClass());
+
+        return $channel;
     }
 }

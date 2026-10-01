@@ -3,6 +3,8 @@
 use Arzcode\Sisifo\Models\InboundEmail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Sleep;
+use Webklex\PHPIMAP\Address;
+use Webklex\PHPIMAP\Attribute;
 use Webklex\PHPIMAP\Client;
 use Webklex\PHPIMAP\ClientManager;
 use Webklex\PHPIMAP\Exceptions\AuthFailedException;
@@ -53,9 +55,9 @@ it('fetches and saves unseen emails', function() {
     $message = Mockery::mock(Message::class);
     $message->shouldReceive('getMessageId')->andReturn('test-message-id@example.com');
     $message->shouldReceive('getSubject')->andReturn('Test Subject');
-    $message->shouldReceive('getFrom')->andReturn([
-        (object)['mail' => 'sender@example.com', 'personal' => 'Test Sender'],
-    ]);
+    $message->shouldReceive('getFrom')->andReturn(new Attribute('from', [
+        new Address((object)['mail' => 'sender@example.com', 'personal' => 'Test Sender']),
+    ]));
     $message->shouldReceive('getRawBody')->andReturn('Raw email body');
     $message->shouldReceive('getTextBody')->andReturn('Plain text body');
     $message->shouldReceive('getDate')->andReturn(now());

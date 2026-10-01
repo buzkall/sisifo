@@ -65,12 +65,13 @@ return [
     |--------------------------------------------------------------------------
     |
     | Selects which LlmProvider implementation gets bound in the container.
-    | Supported drivers: 'prism' (Prism PHP), 'laravel-ai' (stub — not wired).
+    | Supported drivers: 'laravel-ai' (Laravel AI SDK). `provider` is the name
+    | of a provider configured in the host app's config/ai.php.
     |
     */
 
     'llm' => [
-        'driver'     => env('SISIFO_LLM_DRIVER', 'prism'),
+        'driver'     => env('SISIFO_LLM_DRIVER', 'laravel-ai'),
         'provider'   => env('SISIFO_LLM_PROVIDER', 'anthropic'),
         'model'      => env('SISIFO_LLM_MODEL', 'claude-haiku-4-5'),
         'max_tokens' => (int)env('SISIFO_LLM_MAX_TOKENS', 2048),

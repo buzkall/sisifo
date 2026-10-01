@@ -5,6 +5,7 @@ namespace Arzcode\Sisifo\Models;
 use Arzcode\Sisifo\Contracts\SummarizableItem;
 use Arzcode\Sisifo\Database\Factories\InboundEmailFactory;
 use Carbon\CarbonInterface;
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -25,6 +26,7 @@ use Illuminate\Support\Carbon;
  */
 class InboundEmail extends Model implements SummarizableItem
 {
+    /** @use HasFactory<InboundEmailFactory> */
     use HasFactory;
 
     protected $table = 'mailbox_inbound_emails';
@@ -50,13 +52,20 @@ class InboundEmail extends Model implements SummarizableItem
         return InboundEmailFactory::new();
     }
 
+    /**
+     * @return BelongsToMany<MailboxTask, $this>
+     */
     public function mailboxTasks(): BelongsToMany
     {
         return $this->belongsToMany(MailboxTask::class, 'mailbox_task_inbound_email')
             ->withPivot('processed_at');
     }
 
-    public function scopeReceivedAfter(Builder $query, $date): Builder
+    /**
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
+    public function scopeReceivedAfter(Builder $query, DateTimeInterface|string $date): Builder
     {
         return $query->where('received_at', '>=', $date);
     }

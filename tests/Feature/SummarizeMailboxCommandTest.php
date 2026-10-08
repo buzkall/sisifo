@@ -472,3 +472,43 @@ it('returns FAILURE exit code when --task run throws', function() {
 
     $this->artisan('mailbox:process', ['--task' => $task->id])->assertFailed();
 });
+
+it('leaves read emails out of a task that ignores them', function() {
+    $task = MailboxTask::factory()->create([
+        'schedule_time' => '00:00',
+        'filters'       => ['ignore_read' => true],
+    ]);
+
+    $unread = InboundEmail::factory()->create(['subject' => 'Still pending', 'received_at' => now()->subHours(2)]);
+    InboundEmail::factory()->create(['subject' => 'Already answered', 'received_at' => now()->subHours(3), 'read_at' => now()]);
+
+    $fake = fakeLlm(['Resumen']);
+
+    $mock = Mockery::mock(PushoverService::class);
+    $mock->shouldReceive('send')->once();
+    $this->app->instance(PushoverService::class, $mock);
+
+    $this->artisan('mailbox:process')->assertSuccessful();
+
+    expect($task->fresh()->processedEmails->modelKeys())->toBe([$unread->id]);
+
+    $fake->assertPrompted(fn(object $call) => str_contains($call->input, 'Still pending')
+        && ! str_contains($call->input, 'Already answered'));
+});
+
+it('keeps read emails in a task that does not ignore them', function() {
+    $task = MailboxTask::factory()->create(['schedule_time' => '00:00']);
+
+    InboundEmail::factory()->create(['received_at' => now()->subHours(2)]);
+    InboundEmail::factory()->create(['received_at' => now()->subHours(3), 'read_at' => now()]);
+
+    fakeLlm(['Resumen']);
+
+    $mock = Mockery::mock(PushoverService::class);
+    $mock->shouldReceive('send')->once();
+    $this->app->instance(PushoverService::class, $mock);
+
+    $this->artisan('mailbox:process')->assertSuccessful();
+
+    expect($task->fresh()->processedEmails)->toHaveCount(2);
+});

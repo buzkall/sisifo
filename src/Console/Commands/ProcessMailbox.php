@@ -140,6 +140,7 @@ class ProcessMailbox extends Command
                 ?? throw new RuntimeException('The INBOX folder was not found on the IMAP server.');
 
             $this->storeMessages($folder);
+            $this->syncReadState($folder);
         } finally {
             $this->disconnectQuietly($client);
         }
@@ -180,6 +181,50 @@ class ProcessMailbox extends Command
                 Log::error('Email processing error: ' . $e->getMessage());
             }
         }
+    }
+
+    /**
+     * Stamp read_at on stored emails that are no longer unread in INBOX — read,
+     * answered, moved or deleted since they were fetched — so tasks with the
+     * ignore_read filter can skip them. An email marked unread again is cleared.
+     * Costs an extra header-only query, so it only runs when a task asks for it.
+     */
+    private function syncReadState(Folder $folder): void
+    {
+        $lookBackDays = MailboxTask::active()->get()
+            ->filter(fn(MailboxTask $task) => $task->ignoresReadEmails())
+            ->max(fn(MailboxTask $task) => $task->lookBackDays());
+
+        if (! is_int($lookBackDays)) {
+            return;
+        }
+
+        $since = now()->subDays($lookBackDays)->startOfDay();
+
+        // IMAP SINCE compares server dates at day granularity while received_at
+        // comes from the Date header, so ask for one extra day of margin.
+        $messages = $folder->messages()
+            ->whereUnseen()
+            ->whereSince($since->copy()->subDay())
+            ->setFetchBody(false)
+            ->get();
+
+        $unseenIds = [];
+
+        /** @var Message $message */
+        foreach ($messages as $message) {
+            $unseenIds[] = (string)$message->getMessageId();
+        }
+
+        InboundEmail::receivedAfter($since)
+            ->whereNull('read_at')
+            ->whereNotIn('message_id', $unseenIds)
+            ->update(['read_at' => now()]);
+
+        InboundEmail::receivedAfter($since)
+            ->whereNotNull('read_at')
+            ->whereIn('message_id', $unseenIds)
+            ->update(['read_at' => null]);
     }
 
     /**

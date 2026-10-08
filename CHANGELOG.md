@@ -5,6 +5,12 @@ All notable changes to `sisifo` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `ignore_read` task filter ("Ignore read emails"): the task skips stored emails that are no longer unread in `INBOX` — read, answered, moved or deleted since they were fetched. The state is refreshed on every mailbox poll with a header-only query, which only runs while an active task has the filter enabled. Adds a nullable `read_at` column to `mailbox_inbound_emails`; run your migrations when upgrading.
+
 ## [0.1.9] - 2026-10-01
 
 ### Added

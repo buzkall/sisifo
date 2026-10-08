@@ -29,6 +29,8 @@ return [
     'sender_domains'               => 'Sender domains',
     'subject_keywords'             => 'Subject keywords',
     'lookback_days'                => 'Lookback days',
+    'ignore_read_emails'           => 'Ignore read emails',
+    'ignore_read_emails_help'      => 'Skip emails that are no longer unread in the inbox: read, answered, moved or deleted. Checked on every mailbox poll.',
     'leave_empty_all_emails'       => 'Leave empty to process all emails',
     'schedule'                     => 'Schedule',
     'at_time'                      => 'at :time',

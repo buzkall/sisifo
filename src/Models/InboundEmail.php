@@ -21,6 +21,7 @@ use Illuminate\Support\Carbon;
  * @property string $message
  * @property string $text_body
  * @property Carbon|null $received_at
+ * @property Carbon|null $read_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -38,12 +39,14 @@ class InboundEmail extends Model implements SummarizableItem
         'message',
         'text_body',
         'received_at',
+        'read_at',
     ];
 
     protected function casts(): array
     {
         return [
             'received_at' => 'datetime',
+            'read_at'     => 'datetime',
         ];
     }
 

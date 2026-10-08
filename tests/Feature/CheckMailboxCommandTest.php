@@ -1,6 +1,7 @@
 <?php
 
 use Arzcode\Sisifo\Models\InboundEmail;
+use Arzcode\Sisifo\Models\MailboxTask;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Sleep;
 use Webklex\PHPIMAP\Address;
@@ -241,4 +242,85 @@ it('does not retry when the server rejects the login', function() {
     $this->artisan('mailbox:process')->assertSuccessful();
 
     Sleep::assertNeverSlept();
+});
+
+/**
+ * A client whose first INBOX query (the fetch) finds nothing and whose second
+ * (the read-state sync) reports the given message ids as still unseen.
+ *
+ * @param  array<int, string>  $unseenIds
+ */
+function fakeReadStateClient(array $unseenIds): Client
+{
+    $unseen = array_map(function(string $id) {
+        $message = Mockery::mock(Message::class);
+        $message->shouldReceive('getMessageId')->andReturn($id);
+
+        return $message;
+    }, $unseenIds);
+
+    $whereQuery = Mockery::mock(WhereQuery::class);
+    $whereQuery->shouldReceive('whereUnseen')->andReturnSelf();
+    $whereQuery->shouldReceive('whereSince')->andReturnSelf();
+    $whereQuery->shouldReceive('setFetchBody')->once()->with(false)->andReturnSelf();
+    $whereQuery->shouldReceive('get')->twice()->andReturn(new MessageCollection([]), new MessageCollection($unseen));
+
+    $folder = Mockery::mock(Folder::class);
+    $folder->shouldReceive('messages')->andReturn($whereQuery);
+
+    $client = Mockery::mock(Client::class);
+    $client->shouldReceive('connect')->once();
+    $client->shouldReceive('disconnect')->once();
+    $client->shouldReceive('getFolder')->with('INBOX')->andReturn($folder);
+
+    return $client;
+}
+
+it('marks stored emails that are no longer unseen in the inbox as read', function() {
+    MailboxTask::factory()->create(['filters' => ['ignore_read' => true], 'last_run_at' => now()]);
+
+    $handled = InboundEmail::factory()->create(['message_id' => 'handled@example.com', 'received_at' => now()->subDay()]);
+    $unread = InboundEmail::factory()->create(['message_id' => 'unread@example.com', 'received_at' => now()->subDay()]);
+    $outOfWindow = InboundEmail::factory()->old()->create(['message_id' => 'old@example.com']);
+
+    bindClientManager(fakeReadStateClient(['unread@example.com']));
+
+    $this->artisan('mailbox:process')->assertSuccessful();
+
+    expect($handled->fresh()->read_at)->not->toBeNull()
+        ->and($unread->fresh()->read_at)->toBeNull()
+        ->and($outOfWindow->fresh()->read_at)->toBeNull();
+});
+
+it('clears the read mark when an email is unseen again', function() {
+    MailboxTask::factory()->create(['filters' => ['ignore_read' => true], 'last_run_at' => now()]);
+
+    $email = InboundEmail::factory()->create([
+        'message_id'  => 'reopened@example.com',
+        'received_at' => now()->subDay(),
+        'read_at'     => now()->subHour(),
+    ]);
+
+    bindClientManager(fakeReadStateClient(['reopened@example.com']));
+
+    $this->artisan('mailbox:process')->assertSuccessful();
+
+    expect($email->fresh()->read_at)->toBeNull();
+});
+
+it('does not query the read state when no active task ignores read emails', function() {
+    MailboxTask::factory()->create(['filters' => ['ignore_read' => true], 'is_active' => false]);
+    MailboxTask::factory()->create(['last_run_at' => now()]);
+
+    $email = InboundEmail::factory()->create(['received_at' => now()->subDay()]);
+
+    $client = fakeInboxClient();
+    $client->shouldReceive('connect')->once();
+    $client->shouldReceive('disconnect')->once();
+
+    bindClientManager($client);
+
+    $this->artisan('mailbox:process')->assertSuccessful();
+
+    expect($email->fresh()->read_at)->toBeNull();
 });

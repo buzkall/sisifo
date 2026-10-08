@@ -157,10 +157,24 @@ class MailboxTask extends Model
 
         $this->applyFilters($query);
 
-        $lookBackDays = $this->filters['look_back_days'] ?? 7;
-        $query->receivedAfter(now()->subDays(is_numeric($lookBackDays) ? (int)$lookBackDays : 7));
+        $query->receivedAfter(now()->subDays($this->lookBackDays()));
 
         return $query->orderBy('received_at')->get();
+    }
+
+    public function lookBackDays(): int
+    {
+        $lookBackDays = $this->filters['look_back_days'] ?? 7;
+
+        return is_numeric($lookBackDays) ? (int)$lookBackDays : 7;
+    }
+
+    /**
+     * Whether this task skips emails that are no longer unread in the mailbox.
+     */
+    public function ignoresReadEmails(): bool
+    {
+        return filter_var($this->filters['ignore_read'] ?? false, FILTER_VALIDATE_BOOLEAN);
     }
 
     public function isDue(): bool
@@ -248,6 +262,10 @@ class MailboxTask extends Model
         $keywords = $this->filterValues('subject_keywords');
 
         $query
+            ->when(
+                $this->ignoresReadEmails(),
+                fn(Builder $q) => $q->whereNull('read_at')
+            )
             ->when(
                 $addresses->isNotEmpty(),
                 fn(Builder $q) => $q->whereIn('from_address', $addresses)

@@ -29,6 +29,8 @@ return [
     'sender_domains'               => 'Dominios de remitente',
     'subject_keywords'             => 'Palabras clave en asunto',
     'lookback_days'                => 'Días de antigüedad',
+    'ignore_read_emails'           => 'Ignorar correos leídos',
+    'ignore_read_emails_help'      => 'Omite los correos que ya no están sin leer en la bandeja de entrada: leídos, respondidos, movidos o eliminados. Se comprueba en cada consulta del buzón.',
     'leave_empty_all_emails'       => 'Deja vacío para procesar todos los correos',
     'schedule'                     => 'Programación',
     'at_time'                      => 'a las :time',

@@ -145,7 +145,7 @@ Create a **Mailbox Task** from the Filament resource the plugin registers. Each 
 - **Type** — `Summary` (scheduled digest) or `Watch` (continuous).
 - **Prompt** — the instructions handed to the LLM for this task.
 - **Schedule** (summary tasks) — `daily` or `hourly`, with optional days of week, time, and timezone.
-- **Filters** — `from_addresses`, `from_domains`, `subject_keywords`, and `look_back_days` (default 7).
+- **Filters** — `from_addresses`, `from_domains`, `subject_keywords`, `look_back_days` (default 7), and `ignore_read` (off by default) to skip emails that are no longer unread in the inbox — read, answered, moved or deleted — as of the last mailbox poll.
 - **Notification methods** — any combination of the configured channels.
 - **Urgent** flag, and a **one-shot** flag to auto-deactivate after a single run.
 

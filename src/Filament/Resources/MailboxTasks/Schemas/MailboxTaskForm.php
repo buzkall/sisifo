@@ -170,6 +170,11 @@ class MailboxTaskForm
                             ->default(7)
                             ->minValue(1)
                             ->maxValue(90),
+
+                        Toggle::make('filters.ignore_read')
+                            ->label(__('sisifo::sisifo.ignore_read_emails'))
+                            ->helperText(__('sisifo::sisifo.ignore_read_emails_help'))
+                            ->columnSpanFull(),
                     ]),
                 ])->columnSpanFull(),
         ]);

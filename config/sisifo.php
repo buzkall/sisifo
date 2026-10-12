@@ -78,7 +78,29 @@ return [
 
         // Per-item body truncation (characters) applied when rendering items
         // into the LLM input. Defaults to 500 to preserve historical behaviour.
+        // A source can override it under `sources.{source}.item_body_budget`.
         'item_body_budget' => (int)env('SISIFO_LLM_ITEM_BODY_BUDGET', 500),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Sources
+    |--------------------------------------------------------------------------
+    |
+    | Per-source settings, keyed by the task source. `check_every_minutes` is
+    | how often a repository's releases feed is re-fetched, however many tasks
+    | watch it and however often they run. `item_body_budget` overrides
+    | `llm.item_body_budget` for that source only: changelogs are far longer
+    | than emails, and raising the global budget would also inflate every
+    | email task.
+    |
+    */
+
+    'sources' => [
+        'github_releases' => [
+            'check_every_minutes' => (int)env('SISIFO_GITHUB_RELEASES_CHECK_EVERY_MINUTES', 60),
+            'item_body_budget'    => (int)env('SISIFO_GITHUB_RELEASES_ITEM_BODY_BUDGET', 40000),
+        ],
     ],
 
     /*

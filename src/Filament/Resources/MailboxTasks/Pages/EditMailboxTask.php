@@ -2,6 +2,7 @@
 
 namespace Arzcode\Sisifo\Filament\Resources\MailboxTasks\Pages;
 
+use Arzcode\Sisifo\Filament\Resources\MailboxTasks\Actions\FetchGithubReleasesAction;
 use Arzcode\Sisifo\Filament\Resources\MailboxTasks\Actions\ForceFetchEmailsAction;
 use Arzcode\Sisifo\Filament\Resources\MailboxTasks\Actions\RunMailboxTaskAction;
 use Arzcode\Sisifo\Filament\Resources\MailboxTasks\MailboxTaskResource;
@@ -17,6 +18,7 @@ class EditMailboxTask extends EditRecord
         return [
             RunMailboxTaskAction::make(),
             ForceFetchEmailsAction::make(),
+            FetchGithubReleasesAction::make(),
             DeleteAction::make(),
         ];
     }

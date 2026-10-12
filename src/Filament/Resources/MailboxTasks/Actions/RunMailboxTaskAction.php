@@ -2,6 +2,7 @@
 
 namespace Arzcode\Sisifo\Filament\Resources\MailboxTasks\Actions;
 
+use Arzcode\Sisifo\Enums\MailboxTaskSourceEnum;
 use Arzcode\Sisifo\Models\MailboxTask;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -17,7 +18,9 @@ class RunMailboxTaskAction
             ->icon('heroicon-o-play')
             ->color('success')
             ->requiresConfirmation()
-            ->modalDescription(__('sisifo::sisifo.run_now_confirm'))
+            ->modalDescription(fn(MailboxTask $record) => $record->source === MailboxTaskSourceEnum::GithubReleases
+                ? __('sisifo::sisifo.run_now_confirm_releases')
+                : __('sisifo::sisifo.run_now_confirm'))
             ->action(fn(MailboxTask $record, Component $livewire) => self::execute($record, $livewire));
     }
 
@@ -55,7 +58,9 @@ class RunMailboxTaskAction
         }
 
         Notification::make()
-            ->title(__('sisifo::sisifo.no_pending_emails'))
+            ->title($record->source === MailboxTaskSourceEnum::GithubReleases
+                ? __('sisifo::sisifo.no_pending_releases')
+                : __('sisifo::sisifo.no_pending_emails'))
             ->warning()
             ->send();
     }

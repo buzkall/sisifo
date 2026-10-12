@@ -5,6 +5,7 @@ namespace Arzcode\Sisifo\Models;
 use Arzcode\Sisifo\Contracts\SummarizableItem;
 use Arzcode\Sisifo\Database\Factories\MailboxTaskFactory;
 use Arzcode\Sisifo\Enums\MailboxTaskNotificationEnum;
+use Arzcode\Sisifo\Enums\MailboxTaskSourceEnum;
 use Arzcode\Sisifo\Enums\MailboxTaskTypeEnum;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -14,13 +15,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
-use InvalidArgumentException;
 
 /**
  * @property int $id
  * @property string $name
  * @property MailboxTaskTypeEnum $type
- * @property string $source
+ * @property MailboxTaskSourceEnum $source
+ * @property string|null $source_ref
  * @property string $prompt
  * @property bool $is_active
  * @property bool $one_shot
@@ -43,14 +44,25 @@ class MailboxTask extends Model
 
     /**
      * Draws items from Sisifo's inbound-email store (the default source).
+     *
+     * Kept as a string constant for backwards compatibility — `source` is cast
+     * to {@see MailboxTaskSourceEnum}, so compare against the enum case rather
+     * than this constant. Assigning it still works through the cast.
      */
-    public const SOURCE_INBOUND_EMAIL = 'inbound_email';
+    public const SOURCE_INBOUND_EMAIL = MailboxTaskSourceEnum::InboundEmail->value;
+
+    /**
+     * Draws items from a public GitHub repository's releases feed; the repo is
+     * stored in `source_ref` as `owner/repo`.
+     */
+    public const SOURCE_GITHUB_RELEASES = MailboxTaskSourceEnum::GithubReleases->value;
 
     protected $table = 'mailbox_tasks';
     protected $fillable = [
         'name',
         'type',
         'source',
+        'source_ref',
         'prompt',
         'is_active',
         'one_shot',
@@ -69,6 +81,7 @@ class MailboxTask extends Model
     {
         return [
             'type'                 => MailboxTaskTypeEnum::class,
+            'source'               => MailboxTaskSourceEnum::class,
             'notification_methods' => AsEnumCollection::of(MailboxTaskNotificationEnum::class),
             'schedule_days'        => 'array',
             'filters'              => 'array',
@@ -90,6 +103,15 @@ class MailboxTask extends Model
     public function processedEmails(): BelongsToMany
     {
         return $this->belongsToMany(InboundEmail::class, 'mailbox_task_inbound_email')
+            ->withPivot('processed_at');
+    }
+
+    /**
+     * @return BelongsToMany<FeedItem, $this>
+     */
+    public function processedFeedItems(): BelongsToMany
+    {
+        return $this->belongsToMany(FeedItem::class, 'mailbox_task_feed_item')
             ->withPivot('processed_at');
     }
 
@@ -127,9 +149,11 @@ class MailboxTask extends Model
      */
     public function getUnprocessedItems(): Collection
     {
+        // Exhaustive over the enum: an unknown value in the column can never
+        // reach here, the cast rejects it when the model is hydrated.
         $items = match ($this->source) {
-            self::SOURCE_INBOUND_EMAIL => $this->getUnprocessedInboundEmails(),
-            default                    => throw new InvalidArgumentException("Unknown task source [{$this->source}]."),
+            MailboxTaskSourceEnum::InboundEmail   => $this->getUnprocessedInboundEmails(),
+            MailboxTaskSourceEnum::GithubReleases => $this->getUnprocessedFeedItems(),
         };
 
         // Normalize the source-specific collection to the contract type.
@@ -160,6 +184,27 @@ class MailboxTask extends Model
         $query->receivedAfter(now()->subDays($this->lookBackDays()));
 
         return $query->orderBy('received_at')->get();
+    }
+
+    /**
+     * Releases for this task's repo (`source_ref`) not yet processed by it,
+     * within the same look-back window emails get. Without it a new task would
+     * report the whole feed as news, and releases the LLM chose to stay silent
+     * about would be re-sent to it forever.
+     *
+     * @return Collection<int, FeedItem>
+     */
+    private function getUnprocessedFeedItems(): Collection
+    {
+        return FeedItem::query()
+            ->where('source_ref', $this->source_ref)
+            ->where('published_at', '>=', now()->subDays($this->lookBackDays()))
+            ->whereDoesntHave(
+                'mailboxTasks',
+                fn(Builder $q) => $q->where('mailbox_task_id', $this->id)
+            )
+            ->orderBy('published_at')
+            ->get();
     }
 
     public function lookBackDays(): int
@@ -229,8 +274,8 @@ class MailboxTask extends Model
     public function markItemsAsProcessed(Collection $items): void
     {
         match ($this->source) {
-            self::SOURCE_INBOUND_EMAIL => $this->markInboundEmailsAsProcessed($items),
-            default                    => throw new InvalidArgumentException("Unknown task source [{$this->source}]."),
+            MailboxTaskSourceEnum::InboundEmail   => $this->markInboundEmailsAsProcessed($items),
+            MailboxTaskSourceEnum::GithubReleases => $this->markFeedItemsAsProcessed($items),
         };
 
         $this->update(['last_run_at' => now()]);
@@ -250,6 +295,18 @@ class MailboxTask extends Model
         ]);
 
         $this->processedEmails()->attach($pivotData);
+    }
+
+    /**
+     * @param  Collection<int, SummarizableItem>  $items
+     */
+    private function markFeedItemsAsProcessed(Collection $items): void
+    {
+        $pivotData = $items->mapWithKeys(fn(SummarizableItem $item) => [
+            $item->sisifoKey() => ['processed_at' => now()],
+        ]);
+
+        $this->processedFeedItems()->attach($pivotData);
     }
 
     /**

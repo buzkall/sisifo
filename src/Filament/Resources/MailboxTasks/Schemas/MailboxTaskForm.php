@@ -3,6 +3,7 @@
 namespace Arzcode\Sisifo\Filament\Resources\MailboxTasks\Schemas;
 
 use Arzcode\Sisifo\Enums\MailboxTaskNotificationEnum;
+use Arzcode\Sisifo\Enums\MailboxTaskSourceEnum;
 use Arzcode\Sisifo\Enums\MailboxTaskTypeEnum;
 use Arzcode\Sisifo\Models\MailboxTask;
 use Arzcode\Sisifo\Settings\MailboxSettings;
@@ -36,6 +37,25 @@ class MailboxTaskForm
                             ->required()
                             ->maxLength(255),
 
+                        Select::make('source')
+                            ->label(__('sisifo::sisifo.source'))
+                            ->options(MailboxTaskSourceEnum::class)
+                            ->required()
+                            ->live()
+                            ->default(MailboxTaskSourceEnum::InboundEmail),
+
+                        TextInput::make('source_ref')
+                            ->label(__('sisifo::sisifo.source_ref'))
+                            ->prefix('github.com/')
+                            ->placeholder('filamentphp/filament')
+                            ->helperText(__('sisifo::sisifo.source_ref_help'))
+                            // The value is interpolated straight into the feed
+                            // URL, so keep it to a bare `owner/repo`.
+                            ->regex('/^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/')
+                            ->maxLength(255)
+                            ->visible(fn(Get $get): bool => self::isGithubReleases($get))
+                            ->required(fn(Get $get): bool => self::isGithubReleases($get)),
+
                         Select::make('type')
                             ->label(__('sisifo::sisifo.type'))
                             ->options(MailboxTaskTypeEnum::class)
@@ -50,9 +70,11 @@ class MailboxTaskForm
                             ->autosize()
                             ->columnSpanFull(),
 
+                        // Follows the source select, so the task author sees the
+                        // instructions that will actually be appended to theirs.
                         Callout::make(__('sisifo::sisifo.common_instructions'))
-                            ->description(fn(): HtmlString => new HtmlString(
-                                nl2br(e(app(MailboxSettings::class)->common_prompt ?: '-'))
+                            ->description(fn(Get $get): HtmlString => new HtmlString(
+                                nl2br(e(app(MailboxSettings::class)->promptFor(self::selectedSource($get)) ?: '-'))
                             ))
                             ->color('gray')
                             ->columnSpanFull(),
@@ -144,28 +166,38 @@ class MailboxTaskForm
                     ]),
             ])->columnSpanFull(),
 
+            // Only the look-back window applies to every source; the rest
+            // narrow the inbound-email query, so feed sources don't offer them.
             Section::make(__('sisifo::sisifo.filters'))
-                ->description(__('sisifo::sisifo.leave_empty_all_emails'))
+                ->description(fn(Get $get) => self::isGithubReleases($get)
+                    ? null
+                    : __('sisifo::sisifo.leave_empty_all_emails'))
                 ->collapsible()
                 ->schema([
                     Grid::make(2)->schema([
                         TagsInput::make('filters.from_addresses')
                             ->label(__('sisifo::sisifo.sender_addresses'))
                             ->placeholder('email@example.com')
-                            ->splitKeys(['Tab', ',', ' ']),
+                            ->splitKeys(['Tab', ',', ' '])
+                            ->visible(fn(Get $get): bool => ! self::isGithubReleases($get)),
 
                         TagsInput::make('filters.from_domains')
                             ->label(__('sisifo::sisifo.sender_domains'))
                             ->placeholder('example.com')
-                            ->splitKeys(['Tab', ',', ' ']),
+                            ->splitKeys(['Tab', ',', ' '])
+                            ->visible(fn(Get $get): bool => ! self::isGithubReleases($get)),
 
                         TagsInput::make('filters.subject_keywords')
                             ->label(__('sisifo::sisifo.subject_keywords'))
                             ->placeholder(__('sisifo::sisifo.urgent'))
-                            ->splitKeys(['Tab', ',', ' ']),
+                            ->splitKeys(['Tab', ',', ' '])
+                            ->visible(fn(Get $get): bool => ! self::isGithubReleases($get)),
 
                         TextInput::make('filters.look_back_days')
                             ->label(__('sisifo::sisifo.lookback_days'))
+                            ->helperText(fn(Get $get) => self::isGithubReleases($get)
+                                ? __('sisifo::sisifo.lookback_days_releases_help')
+                                : null)
                             ->numeric()
                             ->default(7)
                             ->minValue(1)
@@ -174,9 +206,30 @@ class MailboxTaskForm
                         Toggle::make('filters.ignore_read')
                             ->label(__('sisifo::sisifo.ignore_read_emails'))
                             ->helperText(__('sisifo::sisifo.ignore_read_emails_help'))
-                            ->columnSpanFull(),
+                            ->columnSpanFull()
+                            ->visible(fn(Get $get): bool => ! self::isGithubReleases($get)),
                     ]),
                 ])->columnSpanFull(),
         ]);
+    }
+
+    private static function isGithubReleases(Get $get): bool
+    {
+        return self::selectedSource($get) === MailboxTaskSourceEnum::GithubReleases;
+    }
+
+    /**
+     * Select state arrives as a backed enum when hydrated from the record and
+     * as a raw string after the user picks an option, so normalize both.
+     */
+    private static function selectedSource(Get $get): MailboxTaskSourceEnum
+    {
+        $source = $get('source');
+
+        if ($source instanceof MailboxTaskSourceEnum) {
+            return $source;
+        }
+
+        return (is_string($source) ? MailboxTaskSourceEnum::tryFrom($source) : null) ?? MailboxTaskSourceEnum::InboundEmail;
     }
 }

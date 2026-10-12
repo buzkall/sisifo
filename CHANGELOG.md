@@ -5,6 +5,21 @@ All notable changes to `sisifo` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **GitHub releases source.** A task can now draw from a public repository's releases feed instead of the mailbox: pick *GitHub releases* as the task's source and enter `owner/repo`. No token or API key is needed. Adds the `sisifo_feed_items` and `mailbox_task_feed_item` tables and a nullable `source_ref` column on `mailbox_tasks`; run your migrations when upgrading.
+- Read-only **Feed items** resource listing what was ingested, and a **Fetch releases now** action on the task's edit page.
+- `sisifo.sources.github_releases.check_every_minutes` (`SISIFO_GITHUB_RELEASES_CHECK_EVERY_MINUTES`, default 60): a repository's feed is fetched at most once per interval, whatever the number of tasks watching it.
+- `sisifo.sources.github_releases.item_body_budget` (`SISIFO_GITHUB_RELEASES_ITEM_BODY_BUDGET`, default 40000): a per-source override of `sisifo.llm.item_body_budget`, so long changelogs are not cut at the 500 characters email tasks keep.
+- The *Lookback days* filter also applies to release tasks, which only report releases published within it (7 days by default).
+
+### Changed
+
+- **Breaking:** common instructions are now kept per source. `MailboxSettings::$common_prompt` is replaced by `$common_prompts`, read with `promptFor()` and written with `setPromptFor()`. The settings migration carries the existing text over to every source; host code reading `common_prompt` directly must be updated.
+- `MailboxTask::$source` is cast to `MailboxTaskSourceEnum`. The `MailboxTask::SOURCE_*` constants still work for assignment, but comparisons must use the enum case.
+
 ## [0.1.10] - 2026-10-08
 
 ### Added

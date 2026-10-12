@@ -2,6 +2,7 @@
 
 namespace Arzcode\Sisifo\Filament\Resources\MailboxTasks\Tables;
 
+use Arzcode\Sisifo\Enums\MailboxTaskSourceEnum;
 use Arzcode\Sisifo\Enums\MailboxTaskTypeEnum;
 use Arzcode\Sisifo\Filament\Resources\MailboxTasks\Actions\RunMailboxTaskAction;
 use Arzcode\Sisifo\Models\MailboxTask;
@@ -28,6 +29,12 @@ class MailboxTasksTable
                     ->label(__('sisifo::sisifo.type'))
                     ->badge()
                     ->color(fn(MailboxTaskTypeEnum $state): string => $state->getColor()),
+
+                TextColumn::make('source')
+                    ->label(__('sisifo::sisifo.source'))
+                    ->badge()
+                    ->color(fn(MailboxTaskSourceEnum $state): string => $state->getColor())
+                    ->description(fn(MailboxTask $record): ?string => $record->source_ref),
 
                 ToggleColumn::make('is_active')
                     ->label(__('sisifo::sisifo.active')),

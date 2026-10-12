@@ -2,6 +2,7 @@
 
 namespace Arzcode\Sisifo;
 
+use Arzcode\Sisifo\Filament\Resources\FeedItems\FeedItemResource;
 use Arzcode\Sisifo\Filament\Resources\MailboxTasks\MailboxTaskResource;
 use Filament\Contracts\Plugin;
 use Filament\Panel;
@@ -25,6 +26,7 @@ class SisifoPlugin implements Plugin
     {
         $panel->resources([
             MailboxTaskResource::class,
+            FeedItemResource::class,
         ]);
     }
 

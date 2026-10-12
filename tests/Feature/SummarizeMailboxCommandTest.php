@@ -2,6 +2,7 @@
 
 use Arzcode\Sisifo\Contracts\LlmProvider;
 use Arzcode\Sisifo\Enums\MailboxTaskNotificationEnum;
+use Arzcode\Sisifo\Enums\MailboxTaskSourceEnum;
 use Arzcode\Sisifo\Models\InboundEmail;
 use Arzcode\Sisifo\Models\MailboxTask;
 use Arzcode\Sisifo\Services\Pushover\PushoverService;
@@ -246,7 +247,7 @@ it('does not retry a daily task the same day after a failed attempt', function()
 
 it('blends specific and common prompts when invoking the LLM', function() {
     $settings = app(MailboxSettings::class);
-    $settings->common_prompt = 'BOILER';
+    $settings->setPromptFor(MailboxTaskSourceEnum::InboundEmail, 'BOILER');
     $settings->save();
 
     MailboxTask::factory()->create([
@@ -272,7 +273,7 @@ it('blends specific and common prompts when invoking the LLM', function() {
 
 it('sends only the specific prompt when common prompt is empty', function() {
     $settings = app(MailboxSettings::class);
-    $settings->common_prompt = '';
+    $settings->setPromptFor(MailboxTaskSourceEnum::InboundEmail, '');
     $settings->save();
 
     MailboxTask::factory()->create([

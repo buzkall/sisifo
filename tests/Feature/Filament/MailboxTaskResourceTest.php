@@ -152,12 +152,17 @@ test('source_ref is only asked for when the source is a github repository', func
         ->assertFormFieldVisible('source_ref');
 });
 
-test('email filters are hidden for a github releases task', function() {
+test('a github releases task keeps only the look-back filter', function() {
     Livewire::test(CreateMailboxTask::class)
         ->fillForm(['source' => MailboxTaskSourceEnum::InboundEmail->value])
         ->assertFormFieldVisible('filters.from_addresses')
+        ->assertFormFieldVisible('filters.ignore_read')
         ->fillForm(['source' => MailboxTaskSourceEnum::GithubReleases->value])
-        ->assertFormFieldHidden('filters.from_addresses');
+        ->assertFormFieldHidden('filters.from_addresses')
+        ->assertFormFieldHidden('filters.from_domains')
+        ->assertFormFieldHidden('filters.subject_keywords')
+        ->assertFormFieldHidden('filters.ignore_read')
+        ->assertFormFieldVisible('filters.look_back_days');
 });
 
 test('source_ref must look like owner/repo', function() {

@@ -51,7 +51,9 @@ class ListMailboxTasks extends ListRecords
                     $settings = app(MailboxSettings::class);
 
                     foreach (MailboxTaskSourceEnum::cases() as $source) {
-                        $settings->setPromptFor($source, $data[$source->value] ?? '');
+                        $prompt = $data[$source->value] ?? '';
+
+                        $settings->setPromptFor($source, is_string($prompt) ? $prompt : '');
                     }
 
                     $settings->save();

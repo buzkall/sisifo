@@ -3,8 +3,6 @@
 namespace Arzcode\Sisifo\Filament\Resources\FeedItems\Tables;
 
 use Arzcode\Sisifo\Models\FeedItem;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Schema;
@@ -31,7 +29,7 @@ class FeedItemsTable
 
                 TextColumn::make('published_at')
                     ->label(__('sisifo::sisifo.feed_item_published_at'))
-                    ->dateTime('d/m/Y H:i')
+                    ->dateTime('d/m/Y H:i:s')
                     ->placeholder(__('sisifo::sisifo.never')),
 
                 // A zero here explains a task reporting nothing new.
@@ -61,7 +59,6 @@ class FeedItemsTable
                             ->hiddenLabel()
                             ->markdown(),
                     ])),
-            ])
-            ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
+            ]);
     }
 }

@@ -172,8 +172,8 @@ prompts, scheduling, and notifications work identically.
   (`https://github.com/{owner}/{repo}/releases.atom`, no token, no API).
 
 To point a task at a repository, pick **GitHub releases** in the task's *Source*
-field and enter `owner/repo` in *Repository*. The email filters disappear — they
-only narrow the IMAP query — and a **Fetch releases now** action appears on the
+field and enter `owner/repo` in *Repository*. The email-only filters disappear —
+only *Lookback days* remains — and a **Fetch releases now** action appears on the
 edit page, which pulls the feed and runs the task immediately instead of waiting
 for the schedule. Everything ingested is browsable read-only under **Feed items**.
 
@@ -193,14 +193,27 @@ MailboxTask::create([
 ]);
 ```
 
-Each run fetches the feed, ingests new entries into `sisifo_feed_items` (deduped
-by entry id), and skips near-empty changelogs (betas that render as
-"No content."). Stable release notes are large, so raise the per-item body
-budget well above the 500-char email default:
+Feed entries are ingested into `sisifo_feed_items` (deduped by entry id), and
+releases published without notes (typically betas) are skipped. Three
+things differ from the email source:
+
+- **Fetch interval** — a repository's feed is fetched at most once every
+  `check_every_minutes` (60 by default), however many tasks watch it and however
+  often they run. A repository that fails to load — renamed, private or
+  mistyped — sends the task's failure notification and waits out the same
+  interval before it is tried again.
+  **Fetch releases now** always fetches.
+- **Look-back window** — a task only reports releases published within its
+  *Lookback days* (7 by default), so a new task does not announce the
+  repository's whole history.
+- **Body budget** — release notes are far longer than emails, so this source has
+  its own per-item budget (40000 characters by default) instead of the 500-char
+  `llm.item_body_budget` that email tasks keep.
 
 ```php
-// config/sisifo.php → llm.item_body_budget, or:
-SISIFO_LLM_ITEM_BODY_BUDGET=40000
+// config/sisifo.php → sources.github_releases, or:
+SISIFO_GITHUB_RELEASES_CHECK_EVERY_MINUTES=60
+SISIFO_GITHUB_RELEASES_ITEM_BODY_BUDGET=40000
 ```
 
 ## Extending

@@ -34,6 +34,9 @@ test('feed items are read-only', function() {
     expect(FeedItemResource::canCreate())->toBeFalse()
         ->and(FeedItemResource::getPages())->toHaveKeys(['index'])
         ->and(FeedItemResource::getPages())->toHaveCount(1);
+
+    // A deleted item still in the feed would be re-ingested and reported again.
+    Livewire::test(ListFeedItems::class)->assertTableBulkActionDoesNotExist('delete');
 });
 
 test('navigation group follows the shared sisifo config', function() {

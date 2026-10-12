@@ -26,6 +26,7 @@ use Illuminate\Support\Carbon;
  */
 class FeedItem extends Model implements SummarizableItem
 {
+    /** @use HasFactory<FeedItemFactory> */
     use HasFactory;
 
     protected $table = 'sisifo_feed_items';
@@ -50,6 +51,9 @@ class FeedItem extends Model implements SummarizableItem
         return FeedItemFactory::new();
     }
 
+    /**
+     * @return BelongsToMany<MailboxTask, $this>
+     */
     public function mailboxTasks(): BelongsToMany
     {
         return $this->belongsToMany(MailboxTask::class, 'mailbox_task_feed_item')

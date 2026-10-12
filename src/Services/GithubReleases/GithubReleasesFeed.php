@@ -2,7 +2,6 @@
 
 namespace Arzcode\Sisifo\Services\GithubReleases;
 
-use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
@@ -19,7 +18,7 @@ class GithubReleasesFeed
     /**
      * Fetch and normalize the releases of `owner/repo`.
      *
-     * @return Collection<int, array{external_id: string, title: string, url: string, source_ref: string, body: string, published_at: CarbonInterface}>
+     * @return Collection<int, array{external_id: string, title: string, url: string, source_ref: string, body: string, published_at: Carbon}>
      */
     public function fetch(string $repo): Collection
     {
@@ -30,36 +29,32 @@ class GithubReleasesFeed
     }
 
     /**
-     * @return Collection<int, array{external_id: string, title: string, url: string, source_ref: string, body: string, published_at: CarbonInterface}>
+     * @return Collection<int, array{external_id: string, title: string, url: string, source_ref: string, body: string, published_at: Carbon}>
      */
     private function parse(string $body, string $repo): Collection
     {
+        $entries = [];
         $xml = @simplexml_load_string($body);
 
-        if (! $xml instanceof SimpleXMLElement) {
-            return collect();
-        }
-
-        $converter = new HtmlConverter([
-            'strip_tags'   => true,
-            'remove_nodes' => 'style script',
-        ]);
-
-        /** @var Collection<int, array{external_id: string, title: string, url: string, source_ref: string, body: string, published_at: CarbonInterface}> $entries */
-        $entries = collect();
-
-        foreach ($xml->entry as $entry) {
-            $entries->push([
-                'external_id'  => trim((string)$entry->id),
-                'title'        => trim((string)$entry->title),
-                'url'          => $this->alternateLink($entry),
-                'source_ref'   => $repo,
-                'body'         => trim($converter->convert((string)$entry->content)),
-                'published_at' => Carbon::parse($this->timestamp($entry)),
+        if ($xml instanceof SimpleXMLElement) {
+            $converter = new HtmlConverter([
+                'strip_tags'   => true,
+                'remove_nodes' => 'style script',
             ]);
+
+            foreach ($xml->entry as $entry) {
+                $entries[] = [
+                    'external_id'  => trim((string)$entry->id),
+                    'title'        => trim((string)$entry->title),
+                    'url'          => $this->alternateLink($entry),
+                    'source_ref'   => $repo,
+                    'body'         => trim($converter->convert((string)$entry->content)),
+                    'published_at' => Carbon::parse($this->timestamp($entry)),
+                ];
+            }
         }
 
-        return $entries;
+        return collect($entries);
     }
 
     private function alternateLink(SimpleXMLElement $entry): string

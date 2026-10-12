@@ -187,7 +187,10 @@ class MailboxTask extends Model
     }
 
     /**
-     * Releases for this task's repo (`source_ref`) not yet processed by it.
+     * Releases for this task's repo (`source_ref`) not yet processed by it,
+     * within the same look-back window emails get. Without it a new task would
+     * report the whole feed as news, and releases the LLM chose to stay silent
+     * about would be re-sent to it forever.
      *
      * @return Collection<int, FeedItem>
      */
@@ -195,6 +198,7 @@ class MailboxTask extends Model
     {
         return FeedItem::query()
             ->where('source_ref', $this->source_ref)
+            ->where('published_at', '>=', now()->subDays($this->lookBackDays()))
             ->whereDoesntHave(
                 'mailboxTasks',
                 fn(Builder $q) => $q->where('mailbox_task_id', $this->id)

@@ -56,12 +56,6 @@ class MailboxTaskForm
                             ->visible(fn(Get $get): bool => self::isGithubReleases($get))
                             ->required(fn(Get $get): bool => self::isGithubReleases($get)),
 
-                        Callout::make(__('sisifo::sisifo.source_body_budget'))
-                            ->description(__('sisifo::sisifo.source_body_budget_help'))
-                            ->warning()
-                            ->columnSpanFull()
-                            ->visible(fn(Get $get): bool => self::isGithubReleases($get)),
-
                         Select::make('type')
                             ->label(__('sisifo::sisifo.type'))
                             ->options(MailboxTaskTypeEnum::class)
@@ -172,31 +166,38 @@ class MailboxTaskForm
                     ]),
             ])->columnSpanFull(),
 
-            // Filters only narrow the inbound-email query; the feed sources
-            // ignore them entirely, so don't offer them there.
+            // Only the look-back window applies to every source; the rest
+            // narrow the inbound-email query, so feed sources don't offer them.
             Section::make(__('sisifo::sisifo.filters'))
-                ->description(__('sisifo::sisifo.leave_empty_all_emails'))
+                ->description(fn(Get $get) => self::isGithubReleases($get)
+                    ? null
+                    : __('sisifo::sisifo.leave_empty_all_emails'))
                 ->collapsible()
-                ->visible(fn(Get $get): bool => ! self::isGithubReleases($get))
                 ->schema([
                     Grid::make(2)->schema([
                         TagsInput::make('filters.from_addresses')
                             ->label(__('sisifo::sisifo.sender_addresses'))
                             ->placeholder('email@example.com')
-                            ->splitKeys(['Tab', ',', ' ']),
+                            ->splitKeys(['Tab', ',', ' '])
+                            ->visible(fn(Get $get): bool => ! self::isGithubReleases($get)),
 
                         TagsInput::make('filters.from_domains')
                             ->label(__('sisifo::sisifo.sender_domains'))
                             ->placeholder('example.com')
-                            ->splitKeys(['Tab', ',', ' ']),
+                            ->splitKeys(['Tab', ',', ' '])
+                            ->visible(fn(Get $get): bool => ! self::isGithubReleases($get)),
 
                         TagsInput::make('filters.subject_keywords')
                             ->label(__('sisifo::sisifo.subject_keywords'))
                             ->placeholder(__('sisifo::sisifo.urgent'))
-                            ->splitKeys(['Tab', ',', ' ']),
+                            ->splitKeys(['Tab', ',', ' '])
+                            ->visible(fn(Get $get): bool => ! self::isGithubReleases($get)),
 
                         TextInput::make('filters.look_back_days')
                             ->label(__('sisifo::sisifo.lookback_days'))
+                            ->helperText(fn(Get $get) => self::isGithubReleases($get)
+                                ? __('sisifo::sisifo.lookback_days_releases_help')
+                                : null)
                             ->numeric()
                             ->default(7)
                             ->minValue(1)
@@ -205,7 +206,8 @@ class MailboxTaskForm
                         Toggle::make('filters.ignore_read')
                             ->label(__('sisifo::sisifo.ignore_read_emails'))
                             ->helperText(__('sisifo::sisifo.ignore_read_emails_help'))
-                            ->columnSpanFull(),
+                            ->columnSpanFull()
+                            ->visible(fn(Get $get): bool => ! self::isGithubReleases($get)),
                     ]),
                 ])->columnSpanFull(),
         ]);
@@ -228,6 +230,6 @@ class MailboxTaskForm
             return $source;
         }
 
-        return MailboxTaskSourceEnum::tryFrom((string)$source) ?? MailboxTaskSourceEnum::InboundEmail;
+        return (is_string($source) ? MailboxTaskSourceEnum::tryFrom($source) : null) ?? MailboxTaskSourceEnum::InboundEmail;
     }
 }

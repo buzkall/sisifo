@@ -58,7 +58,26 @@ it('ingests releases into feed items mapped to honest columns', function() {
         ->and($item->published_at->toDateString())->toBe('2026-07-10');
 });
 
-it('skips near-empty beta changelogs', function() {
+it('keeps a release whose notes are only a few words', function() {
+    Http::fake(['github.com/*' => Http::response(<<<'ATOM'
+        <?xml version="1.0" encoding="UTF-8"?>
+        <feed xmlns="http://www.w3.org/2005/Atom">
+          <entry>
+            <id>tag:github.com,2008:Repository/1/v1.0.1</id>
+            <updated>2026-07-01T10:00:00Z</updated>
+            <link rel="alternate" type="text/html" href="https://github.com/acme/tool/releases/tag/v1.0.1"/>
+            <title>v1.0.1</title>
+            <content type="html">&lt;p&gt;Bug fixes.&lt;/p&gt;</content>
+          </entry>
+        </feed>
+        ATOM)]);
+
+    app(GithubReleasesIngestor::class)->ingest('acme/tool');
+
+    expect(FeedItem::where('title', 'v1.0.1')->value('body'))->toBe('Bug fixes.');
+});
+
+it('skips releases published without notes', function() {
     fakeReleasesFeed();
 
     app(GithubReleasesIngestor::class)->ingest('filamentphp/filament');

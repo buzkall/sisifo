@@ -308,10 +308,15 @@ class ProcessMailbox extends Command
         }
 
         try {
-            app(GithubReleasesIngestor::class)->ingest($task->source_ref);
+            app(GithubReleasesIngestor::class)->ingestIfDue($task->source_ref);
         } catch (Exception $e) {
             $this->error("Feed fetch error for [{$task->source_ref}]: {$e->getMessage()}");
             Log::error("Mailbox task [{$task->name}] feed fetch error: " . $e->getMessage());
+
+            // A renamed, private or mistyped repository would otherwise fail
+            // silently on every scheduled run. The fetch throttle keeps this to
+            // one notification per interval.
+            $this->notifyFailure($task, "{$task->source_ref}: {$e->getMessage()}");
         }
     }
 
@@ -328,19 +333,24 @@ class ProcessMailbox extends Command
         $task->markAttempted();
 
         try {
-            $bodyBudget = ConfigValue::int('sisifo.llm.item_body_budget', 500);
+            $bodyBudget = ConfigValue::int(
+                "sisifo.sources.{$task->source->value}.item_body_budget",
+                ConfigValue::int('sisifo.llm.item_body_budget', 500),
+            );
 
-            $itemsText = $items->map(function(SummarizableItem $item) use ($bodyBudget) {
+            $labels = $task->source->itemLabels();
+
+            $itemsText = $items->map(function(SummarizableItem $item) use ($bodyBudget, $labels) {
                 $body = Str::limit($item->sisifoBody(), $bodyBudget);
 
-                return "De: {$item->sisifoOrigin()}\n"
-                    . "Asunto: {$item->sisifoTitle()}\n"
-                    . "Fecha: {$item->sisifoOccurredAt()->format('d/m/Y H:i')}\n"
-                    . "Contenido: {$body}\n";
+                return "{$labels['origin']}: {$item->sisifoOrigin()}\n"
+                    . "{$labels['title']}: {$item->sisifoTitle()}\n"
+                    . "{$labels['date']}: {$item->sisifoOccurredAt()->format('d/m/Y H:i')}\n"
+                    . "{$labels['body']}: {$body}\n";
             })->implode("\n---\n");
 
             $commonPrompt = app(MailboxSettings::class)->promptFor($task->source);
-            $skipInstruction = 'If after analyzing the emails there is nothing relevant to report, respond ONLY with the literal text '
+            $skipInstruction = "If after analyzing the {$task->source->itemNoun()} there is nothing relevant to report, respond ONLY with the literal text "
                 . self::SKIP_SENTINEL . ' and nothing else.';
             $fullPrompt = trim(trim($task->prompt)
                 . ($commonPrompt === '' ? '' : "\n\n" . $commonPrompt)

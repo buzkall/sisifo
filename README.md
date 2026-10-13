@@ -102,7 +102,7 @@ bypass the throttle on demand.
 ```dotenv
 SISIFO_LLM_DRIVER=laravel-ai      # the only bundled driver
 SISIFO_LLM_PROVIDER=anthropic
-SISIFO_LLM_MODEL=claude-haiku-4-5
+SISIFO_LLM_MODEL=claude-haiku-5-5
 SISIFO_LLM_MAX_TOKENS=2048
 ```
 
@@ -119,6 +119,21 @@ The package registers the `mailbox:process` command to run **every minute** (in 
 ```cron
 * * * * * cd /path-to-your-project && php artisan schedule:run >> /dev/null 2>&1
 ```
+
+#### Holidays
+
+If the host app has a `holidays` table and today's date (in the app timezone) appears in its `date` column, `mailbox:process` skips every scheduled task for the day. The mailbox is still polled, so the emails received on a holiday are handled on the next working day. Running a single task with `--task` ignores holidays, as it ignores the schedule.
+
+The Mailbox Tasks list in the panel says so under its heading: that tasks are skipped today, or otherwise the date of the next holiday.
+
+Apps without that table are unaffected. Point the check at a different table or column if yours are named otherwise:
+
+```dotenv
+SISIFO_HOLIDAYS_TABLE=holidays
+SISIFO_HOLIDAYS_DATE_COLUMN=date
+```
+
+Set `sisifo.holidays.table` to `null` to turn the check off.
 
 ### Notifications
 

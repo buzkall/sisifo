@@ -56,7 +56,7 @@ it('sends instructions, model and max tokens to the provider', function() {
             'id'          => 'msg_1',
             'type'        => 'message',
             'role'        => 'assistant',
-            'model'       => 'claude-haiku-4-5',
+            'model'       => 'claude-haiku-5-5',
             'content'     => [['type' => 'text', 'text' => 'Resumen.']],
             'stop_reason' => 'end_turn',
             'usage'       => ['input_tokens' => 10, 'output_tokens' => 5],
@@ -68,7 +68,7 @@ it('sends instructions, model and max tokens to the provider', function() {
     expect($text)->toBe('Resumen.');
 
     Http::assertSent(fn(Request $request) => $request['max_tokens'] === 1234
-        && $request['model'] === 'claude-haiku-4-5'
+        && $request['model'] === 'claude-haiku-5-5'
         && str_contains(json_encode($request['system']), 'Eres un asistente.')
         && str_contains(json_encode($request['messages']), 'De: a@b.c'));
 });

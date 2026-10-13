@@ -10,6 +10,7 @@ use Arzcode\Sisifo\Models\InboundEmail;
 use Arzcode\Sisifo\Models\MailboxTask;
 use Arzcode\Sisifo\Settings\MailboxSettings;
 use Arzcode\Sisifo\Support\ConfigValue;
+use Arzcode\Sisifo\Support\Holidays;
 use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
@@ -50,6 +51,12 @@ class ProcessMailbox extends Command
             }
 
             return $this->executeTask($task, $llm) ? self::SUCCESS : self::FAILURE;
+        }
+
+        if (Holidays::isToday()) {
+            $this->info('Today is a holiday: mailbox tasks skipped.');
+
+            return self::SUCCESS;
         }
 
         $this->processWatchTasks($llm);

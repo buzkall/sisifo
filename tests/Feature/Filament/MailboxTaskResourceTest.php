@@ -8,7 +8,10 @@ use Arzcode\Sisifo\Settings\MailboxSettings;
 use Arzcode\Sisifo\Tests\Support\TestUser;
 use Filament\Actions\ReplicateAction;
 use Illuminate\Contracts\Console\Kernel as ConsoleKernel;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Livewire\Livewire;
 
 use function Pest\Laravel\actingAs;
@@ -22,6 +25,42 @@ beforeEach(function() {
 
 test('ListMailboxTasks page renders', function() {
     Livewire::test(ListMailboxTasks::class)->assertSuccessful();
+});
+
+test('ListMailboxTasks page says nothing about holidays without a holidays table', function() {
+    Livewire::test(ListMailboxTasks::class)
+        ->assertDontSee('holiday');
+});
+
+test('ListMailboxTasks page warns that tasks are skipped on a holiday', function() {
+    Schema::create('holidays', function(Blueprint $table) {
+        $table->id();
+        $table->date('date');
+    });
+    DB::table('holidays')->insert(['date' => now()->toDateString()]);
+
+    Livewire::test(ListMailboxTasks::class)
+        ->assertSee('Today (29/06/2026) is a holiday: scheduled tasks are skipped.');
+
+    Schema::drop('holidays');
+});
+
+test('ListMailboxTasks page announces the next holiday', function() {
+    Schema::create('holidays', function(Blueprint $table) {
+        $table->id();
+        $table->date('date');
+    });
+    DB::table('holidays')->insert([
+        ['date' => now()->subDay()->toDateString()],
+        ['date' => now()->addDays(20)->toDateString()],
+        ['date' => now()->addDays(3)->toDateString()],
+    ]);
+
+    Livewire::test(ListMailboxTasks::class)
+        ->assertSee('Scheduled tasks will be skipped on the next holiday: 02/07/2026.')
+        ->assertDontSee('is a holiday');
+
+    Schema::drop('holidays');
 });
 
 test('navigation group defaults to Logistics and follows the config', function() {

@@ -70,4 +70,6 @@ return [
     'name'                         => 'Nombre',
     'type'                         => 'Tipo',
     'active'                       => 'Activo',
+    'holiday_today'                => 'Hoy (:date) es festivo: las tareas programadas no se ejecutan. Una tarea se puede seguir ejecutando manualmente.',
+    'holiday_next'                 => 'Las tareas programadas no se ejecutarán el próximo festivo: :date.',
 ];

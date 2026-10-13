@@ -34,6 +34,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Holidays
+    |--------------------------------------------------------------------------
+    |
+    | When the host app has this table and today's date (in the app timezone)
+    | appears in `date_column`, scheduled tasks are skipped for the day. The
+    | mailbox is still polled, so those emails are picked up on the next
+    | working day. Apps without the table are unaffected; set `table` to null
+    | to turn the check off.
+    |
+    */
+
+    'holidays' => [
+        'table'       => env('SISIFO_HOLIDAYS_TABLE', 'holidays'),
+        'date_column' => env('SISIFO_HOLIDAYS_DATE_COLUMN', 'date'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | IMAP Connection
     |--------------------------------------------------------------------------
     |
@@ -73,7 +91,7 @@ return [
     'llm' => [
         'driver'     => env('SISIFO_LLM_DRIVER', 'laravel-ai'),
         'provider'   => env('SISIFO_LLM_PROVIDER', 'anthropic'),
-        'model'      => env('SISIFO_LLM_MODEL', 'claude-haiku-4-5'),
+        'model'      => env('SISIFO_LLM_MODEL', 'claude-haiku-5-5'),
         'max_tokens' => (int)env('SISIFO_LLM_MAX_TOKENS', 2048),
 
         // Per-item body truncation (characters) applied when rendering items

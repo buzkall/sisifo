@@ -70,4 +70,6 @@ return [
     'name'                         => 'Name',
     'type'                         => 'Type',
     'active'                       => 'Active',
+    'holiday_today'                => 'Today (:date) is a holiday: scheduled tasks are skipped. A task can still be run manually.',
+    'holiday_next'                 => 'Scheduled tasks will be skipped on the next holiday: :date.',
 ];

@@ -5,6 +5,18 @@ All notable changes to `sisifo` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.1.11] - 2026-10-13
+
+### Added
+
+- Holidays: when the host app has a `holidays` table and today's date appears in its `date` column, `mailbox:process` skips the scheduled tasks for the day. The mailbox is still polled and `--task` runs are unaffected. The table and column names are configurable through `sisifo.holidays.table` (`SISIFO_HOLIDAYS_TABLE`) and `sisifo.holidays.date_column` (`SISIFO_HOLIDAYS_DATE_COLUMN`); apps without the table behave as before. The Mailbox Tasks list shows a notice when today is a holiday, or the date of the next one.
+
+### Changed
+
+- The default LLM model is now `claude-haiku-5-5` (was `claude-haiku-4-5`). Apps that set `SISIFO_LLM_MODEL` are unaffected; set `SISIFO_LLM_MODEL=claude-haiku-4-5` to keep the previous model.
+
 ## [0.1.10] - 2026-10-08
 
 ### Added

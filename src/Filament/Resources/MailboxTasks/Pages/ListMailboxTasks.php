@@ -4,6 +4,7 @@ namespace Arzcode\Sisifo\Filament\Resources\MailboxTasks\Pages;
 
 use Arzcode\Sisifo\Filament\Resources\MailboxTasks\MailboxTaskResource;
 use Arzcode\Sisifo\Settings\MailboxSettings;
+use Arzcode\Sisifo\Support\Holidays;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Forms\Components\Textarea;
@@ -13,6 +14,11 @@ use Filament\Resources\Pages\ListRecords;
 class ListMailboxTasks extends ListRecords
 {
     protected static string $resource = MailboxTaskResource::class;
+
+    public function getSubheading(): ?string
+    {
+        return Holidays::notice();
+    }
 
     protected function getHeaderActions(): array
     {
